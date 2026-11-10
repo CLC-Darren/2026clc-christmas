@@ -2,7 +2,7 @@
 import {firebaseConfig,superusers} from './firebase-config.js';
 import {getApps,initializeApp} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js';
-import {getFirestore,collection,doc,writeBatch,serverTimestamp,onSnapshot,deleteDoc} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js';
+import {getFirestore,collection,doc,writeBatch,serverTimestamp,onSnapshot,getDocsFromServer,deleteDoc} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js';
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -69,18 +69,47 @@ function getEntries(){const branch=$('publicMealBranch').value,service=$('public
     return {branch,service,mealName:name,unitPrice,totalBudget,note,imageData,createdAt:serverTimestamp()};
   });return entries;
 }
-async function send(e){e.preventDefault();if(sending)return;if(!db){message('尚未連接 Firebase，請先完成 Firebase 設定。',true);return}
-  let entries;try{entries=getEntries()}catch(err){message(err.message,true);return}
-  const submit=$('submitPublicMeals');sending=true;submit.disabled=true;submit.textContent='正在送出…';
+// 只在 Firebase 實際完成寫入後宣告成功，並立即從伺服器重新讀取公開清單。
+function applyMealSnapshot(snapshot){
+  meals=snapshot.docs.map(d=>({...d.data(),id:d.id}));
+  render();
+}
+async function send(e){
+  e.preventDefault();
+  if(sending)return;
+  if(!db){message('尚未連接 Firebase，請先完成 Firebase 設定。',true);return}
+  let entries;
+  try{entries=getEntries()}catch(err){message(err.message,true);return}
+  const submit=$('submitPublicMeals');
+  sending=true;submit.disabled=true;submit.textContent='正在送出…';
+  let savedIds=[];
   try{
     const batch=writeBatch(db),col=collection(db,'christmas2026','main','publicMeals');
-    for(const entry of entries)batch.set(doc(col),entry);
-    await batch.commit();
+    for(const entry of entries){const newDoc=doc(col);batch.set(newDoc,entry);savedIds.push(newDoc.id)}
+    await batch.commit(); // 確認伺服器已接收，不只是本機草稿。
     localStorage.removeItem(key);rows.innerHTML='';mealRow();
-    message(`已成功送出 ${entries.length} 筆餐點！已直接公布在首頁。`);
-    document.getElementById('meals-showcase').scrollIntoView({behavior:'smooth',block:'start'});
-  }catch(err){console.error(err);message(err.code==='permission-denied'?'送出被 Firestore Rules 拒絕。請確認已發布本次更新的 firestore.rules。':'送出失敗：'+(err.message||'請稍後重試'),true)}
-  finally{sending=false;submit.disabled=false;submit.textContent='送出餐點'}
+
+    // 主動重新取得 server 資料，避免只等即時監聽器更新而讓使用者看不到新卡片。
+    try{
+      const snapshot=await getDocsFromServer(col);
+      applyMealSnapshot(snapshot);
+      const visible=savedIds.every(id=>snapshot.docs.some(d=>d.id===id));
+      if(visible){
+        message(`已送出 ${entries.length} 筆餐點，並確認顯示於首頁（目前共 ${meals.length} 筆）。`);
+      }else{
+        message('資料已儲存至 Firebase，但公開清單尚未找到本次餐點。請不要重複送出；請至 Firebase → Firestore Database → Data 檢查 publicMeals。',true);
+      }
+    }catch(readError){
+      console.error('publicMeals readback error',readError);
+      message('餐點已儲存，但無法重新讀取公開清單（'+(readError.code||readError.message||'未知錯誤')+'）。請不要重複送出；請檢查 Firestore Rules 的 publicMeals 讀取權限。',true);
+    }
+    $('meals-showcase').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(err){
+    console.error('publicMeals write error',err);
+    message(err.code==='permission-denied'?'送出被 Firestore Rules 拒絕。請確認已發布本次更新的 firestore.rules。':'送出失敗：'+(err.message||'請稍後重試'),true);
+  }finally{
+    sending=false;submit.disabled=false;submit.textContent='送出餐點';
+  }
 }
 function cardHTML(item,withAdmin){return `<article class="public-meal-card"><div class="public-meal-image"><img src="${esc(item.imageData)}" alt="${esc(item.mealName)}" loading="lazy"></div>
   <div class="public-meal-content"><div class="public-meal-tags"><span>${esc(item.branch)}</span><span>${esc(item.service)}</span></div><h4>${esc(item.mealName)}</h4><div class="public-meal-price"><span>每套 ${money(item.unitPrice)}</span><b>總預算 ${money(item.totalBudget)}</b></div>${item.note?`<p>${esc(item.note)}</p>`:''}${withAdmin?`<button type="button" class="meal-admin-delete" data-meal-delete="${esc(item.id)}">刪除此筆</button>`:''}</div></article>`}
@@ -104,6 +133,6 @@ loadLocal();
 const configured=!Object.values(firebaseConfig).some(v=>!v||String(v).includes('PASTE_'));
 if(configured){
   const app=getApps()[0]||initializeApp(firebaseConfig);db=getFirestore(app);
-  onSnapshot(collection(db,'christmas2026','main','publicMeals'),snapshot=>{meals=snapshot.docs.map(d=>({...d.data(),id:d.id}));render()},err=>{console.error(err);$('featuredMeals').innerHTML=$('allPublicMeals').innerHTML='<p class="meal-empty">餐點資料無法讀取，請檢查 Firestore Rules 是否已更新。</p>'});
+  onSnapshot(collection(db,'christmas2026','main','publicMeals'),applyMealSnapshot,err=>{console.error('publicMeals listener error',err);$('featuredMeals').innerHTML=$('allPublicMeals').innerHTML='<p class="meal-empty">餐點清單讀取失敗（'+esc(err.code||err.message||'未知錯誤')+'）。請檢查 Firestore Rules 的 publicMeals allow list 權限，然後重新整理。</p>';});
   onAuthStateChanged(getAuth(app),user=>{admin=!!(user?.emailVerified&&superusers.includes((user.email||'').toLowerCase()));render()});
 }else{$('featuredMeals').innerHTML=$('allPublicMeals').innerHTML='<p class="meal-empty">Firebase 尚未設定，完成後將自動顯示已提交餐點。</p>';message('請先完成 Firebase 設定才可送出餐點。',true)}
