@@ -7,3 +7,56 @@
 .primary-btn{background:#d8ad5c;color:#203c2f}
 .primary-btn:hover:not(:disabled){background:#ecc57b;color:#203c2f}
 .auth-button:disabled{opacity:.55;cursor:not-allowed}
+
+/* 2026 Christmas｜免登入餐點提案：新增功能獨立樣式，不影響舊版型 */
+.meals-showcase{padding-block:10px 68px}
+.meals-showcase .section-heading{margin-bottom:20px}
+.meals-cta{display:inline-flex;align-items:center;justify-content:center;padding:11px 17px;border-radius:40px;background:#e7bd6e;color:#1d3b2e;font-size:13px;font-weight:800;white-space:nowrap}
+.meals-more{display:inline-block;margin-top:20px;color:#8a662a;font-size:13px;font-weight:750}
+.public-meal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:17px}
+.public-meal-card{border:1px solid #e1e5db;border-radius:15px;background:#fffefa;overflow:hidden;box-shadow:0 10px 25px rgba(26,53,34,.04)}
+.public-meal-image{background:#e9ecdd;height:185px;overflow:hidden}
+.public-meal-image img{width:100%;height:100%;object-fit:cover;display:block}
+.public-meal-content{padding:17px 18px 20px}
+.public-meal-content h4{font-size:17px;line-height:1.45;margin:10px 0 13px}
+.public-meal-tags{display:flex;gap:7px}
+.public-meal-tags span{color:#54705a;background:#edf2e9;font-size:11px;font-weight:750;padding:3px 9px;border-radius:99px}
+.public-meal-tags span+span{background:#fbefd6;color:#87652d}
+.public-meal-price{display:flex;justify-content:space-between;flex-wrap:wrap;gap:5px;font-size:12px;color:#647264;border-top:1px solid #eef0e9;padding-top:12px}
+.public-meal-price b{color:#8a652d}
+.public-meal-content p{font-size:12px;color:#68756b;margin:10px 0 0;white-space:pre-wrap}
+.meal-admin-delete{margin-top:12px;padding:6px 10px;border-radius:7px;background:#fff;border:1px solid #d9b6a6;color:#944b35;font-size:11px}
+.meal-empty{grid-column:1/-1;color:#7c887c;background:#f4f5ef;border:1px dashed #d5dccd;padding:22px;border-radius:12px;font-size:13px}
+.meal-public-shell{margin-top:24px}
+.meal-public-form{padding:27px;background:#fffefa;border:1px solid #e0e4db;border-radius:18px;box-shadow:0 10px 40px #253a2708}
+.meal-form-top{display:flex;justify-content:space-between;align-items:start;gap:20px;margin-bottom:20px}
+.meal-form-top h4,.meal-list-heading h4{font-size:20px;margin:0 0 6px;color:#263d2e}
+.meal-form-top p{font-size:13px;color:#728071;margin:0}
+.meal-nologin{display:inline-block;background:#f9ebcc;color:#886327;font-size:11px;border-radius:99px;padding:6px 12px;font-weight:750;white-space:nowrap}
+.meal-selectors{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px}
+.meal-selectors label,.meal-entry label{font-size:12px;font-weight:700;color:#576c5e;display:flex;flex-direction:column;gap:7px}
+.meal-selectors select,.meal-entry input:not([type=file]),.meal-entry textarea{width:100%;min-width:0;border-radius:9px;border:1px solid #d6dfd5;background:#fff;color:#263a2d;padding:11px 12px;font-size:14px;outline:0}
+.meal-selectors select:focus,.meal-entry input:focus,.meal-entry textarea:focus{border-color:#cba04c;box-shadow:0 0 0 3px #d9b15d33}
+.meal-entry-list{display:grid;gap:14px}
+.meal-entry{position:relative;border:1px solid #e3e5dc;background:#f9faf6;border-radius:13px;padding:19px;margin:0;min-width:0}
+.meal-entry legend{font-size:12px;font-weight:800;color:#967138;letter-spacing:.08em;padding:0 7px}
+.meal-remove{position:absolute;right:16px;top:11px;background:transparent;border:0;color:#9d6d5e;font-size:12px}
+.meal-remove[hidden],.meal-picture img[hidden],.meal-picture-placeholder[hidden]{display:none!important}
+.meal-entry-fields{display:grid;grid-template-columns:168px minmax(0,1fr);gap:20px;align-items:stretch}
+.meal-picture{position:relative;background:#eef0e8;border:1px dashed #b9c3ae;border-radius:10px;overflow:hidden;min-height:168px;padding:9px;align-items:center;justify-content:center;text-align:center;cursor:pointer}
+.meal-picture input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:2}
+.meal-picture-placeholder{color:#8c753e;font-size:14px;margin:auto}
+.meal-picture img{width:100%;height:125px;object-fit:cover;border-radius:7px;display:block;margin-top:3px}
+.meal-entry-inputs{display:grid;gap:11px}
+.meal-prices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.meal-entry textarea{min-height:55px;resize:vertical}
+.meal-form-actions{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-top:19px}
+.meal-form-actions .primary-btn{min-width:150px;background:#dbad56;color:#20392b}
+.meal-form-message{font-size:12px;color:#7d876d;margin:15px 0 0}
+.meal-form-message.error{color:#aa4c36;font-weight:700}
+.meal-list-heading{display:flex;justify-content:space-between;align-items:center;gap:15px;margin:32px 0 16px}
+.meal-list-heading h4{margin:0}
+.meal-list-heading h4 span{color:#a7803e}
+.meal-list-heading a{font-size:12px;color:#8f6b30}
+@media(max-width:850px){.public-meal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.meals-showcase{padding-block:0 48px}.public-meal-grid{grid-template-columns:1fr}.public-meal-image{height:210px}.meal-public-form{padding:17px}.meal-form-top{flex-direction:column;gap:9px}.meal-selectors{grid-template-columns:1fr}.meal-entry-fields{grid-template-columns:1fr;gap:13px}.meal-picture{min-height:150px}.meal-picture img{max-height:180px;height:auto}.meal-form-actions{align-items:stretch}.meal-form-actions button{flex:1;padding-inline:8px}.meal-prices{grid-template-columns:repeat(2,minmax(0,1fr))}}

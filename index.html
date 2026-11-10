@@ -44,6 +44,11 @@
       </div>
       <div id="connectionNotice" class="notice" role="status">網站正在載入...</div>
     </section>
+    <section id="meals-showcase" class="container meals-showcase" aria-label="已提交餐點">
+      <div class="section-heading"><div><span class="kicker">CHRISTMAS HOSPITALITY</span><h2>各分堂餐點提案</h2></div><a class="meals-cta" href="#meals">＋ 免登入新增餐點 ↗</a></div>
+      <div id="featuredMeals" class="public-meal-grid" aria-live="polite"><p class="meal-empty">正在讀取餐點提案...</p></div>
+      <a id="allMealsLink" class="meals-more" href="#meals" hidden>查看全部餐點提案 ↓</a>
+    </section>
     <section id="timeline" class="timeline-section section-pad">
       <div class="container">
         <div class="section-heading"><div><span class="kicker">AT A GLANCE</span><h2>四週活動時間軸</h2></div><p>依日期往下看，點選卡片可快速前往相應工作。</p></div>
@@ -56,13 +61,26 @@
       </div>
     </section>
     <section id="workstreams" class="section-pad container">
-      <div class="section-heading"><div><span class="kicker">WORKSTREAMS</span><h2>工作進度與資料</h2></div><p>同工可登入填寫草稿；送出後由 Superuser 確認。已確認項目會鎖定。</p></div>
+      <div class="section-heading"><div><span class="kicker">WORKSTREAMS</span><h2>工作進度與資料</h2></div><p>餐點提案免登入、送出即公開；其他工作資料沿用原本的登入與確認流程。</p></div>
       <div class="deadline-banner"><span class="deadline-icon">◎</span><div><b>11/20（五）餐點提交截止</b><span>請各分堂上傳餐點照片，並填寫單價與預計總預算。</span></div><a href="#meals">查看餐點規劃 ↗</a></div>
       <div id="central" class="block-heading"><div><span class="kicker">01 / CENTRAL</span><h3>中央統一提供</h3></div><p>聖誕季餐點兌換券、聖誕季貼紙</p></div>
       <div id="centralCards" class="items-grid"></div>
-      <div id="meals" class="block-heading"><div><span class="kicker">02 / BRANCHES</span><h3>三分堂餐點與預算</h3></div><p>餐點的「感覺」要比平常升級；建議個人點心之外，也有整桌分享的餐點。</p></div>
+      <div id="meals" class="block-heading"><div><span class="kicker">02 / BRANCHES</span><h3>三分堂餐點與預算</h3></div><p>不需登入，每項餐點只需一張照片、名稱、單價、總預算；備註可留白。</p></div>
       <div class="tip">江翠週六參考預算 <b>NT$ 8,000</b>（約 $120／新朋友）；主日 <b>NT$ 12,000</b>（約 $100／四人桌氛圍點心）。Life Cafe 已提供甜點、鹹食及咖啡，請評估互補性。各分堂仍須向主任牧師核定預算。</div>
-      <div id="mealCards" class="items-grid"></div>
+      <div class="meal-public-shell">
+        <form id="publicMealForm" class="meal-public-form" novalidate>
+          <div class="meal-form-top"><div><h4>新增餐點提案</h4><p>選好分堂與聚會場次，接著可一次填寫多筆餐點。</p></div><span class="meal-nologin">免登入 · 送出立即公布</span></div>
+          <div class="meal-selectors">
+            <label>分堂<select id="publicMealBranch" required><option value="">請選擇分堂</option><option value="江翠">江翠</option><option value="新莊">新莊</option><option value="林口">林口</option></select></label>
+            <label>聚會類別<select id="publicMealService" required disabled><option value="">請先選擇分堂</option></select></label>
+          </div>
+          <div id="publicMealRows" class="meal-entry-list"></div>
+          <div class="meal-form-actions"><button type="button" id="addPublicMeal" class="secondary-btn">＋ 新增一筆餐點</button><button type="submit" id="submitPublicMeals" class="primary-btn">送出餐點</button></div>
+          <p class="meal-form-message" id="publicMealMessage" role="status">請上傳餐點實拍照或示意照片。送出後立即在首頁顯示，只有管理員可刪除。</p>
+        </form>
+        <div class="meal-list-heading"><h4>已提交餐點 <span id="publicMealCount">0</span></h4><a href="#meals-showcase">回到首頁餐點區 ↑</a></div>
+        <div id="allPublicMeals" class="public-meal-grid"><p class="meal-empty">正在讀取已提交餐點...</p></div>
+      </div>
       <div id="honghui" class="block-heading"><div><span class="kicker">03 / HONGHUI</span><h3>宏匯聖誕接待</h3></div><p>12/19–12/20，共四場；中央準備小禮物、點心和飲料。</p></div>
       <div id="honghuiCards" class="items-grid"></div>
     </section>
@@ -100,5 +118,6 @@
   <dialog id="editDialog" class="edit-dialog"><form method="dialog" id="editForm"><div class="dialog-head"><div><span class="kicker" id="editKicker">EDIT ITEM</span><h2 id="editTitle">項目編輯</h2></div><button id="closeDialog" type="button" class="icon-close" aria-label="關閉">×</button></div><div id="editFields" class="dialog-fields"></div><div id="photoSection" class="photo-section" hidden><label class="photo-upload">＋ 上傳餐點照片 <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden></label><p>每個分堂最多 3 張，圖片會自動壓縮；請避免拍到人臉或敏感資訊。</p><div id="photoPreview" class="photo-grid"></div></div><div class="save-info" id="saveInfo">編輯後將保留本機草稿，10 分鐘後自動同步儲存。</div><div class="dialog-actions"><button id="saveDraft" type="button" class="secondary-btn">儲存草稿</button><button id="submitReview" type="button" class="primary-btn">送出確認</button><button id="approveItem" type="button" class="approve-btn" hidden>確認並鎖定</button><button id="unlockItem" type="button" class="secondary-btn" hidden>解除鎖定</button></div></form></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script type="module" src="app.js"></script>
+  <script type="module" src="meal-public.js"></script>
 </body>
 </html>

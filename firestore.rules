@@ -57,6 +57,37 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if superuser();
     }
+    // 公開餐點：任何訪客只可新增格式受限的餐點提案，無法更動或刪除他人的資料。
+    // 注意：免登入公開寫入仍可能遭到灌資料；正式對外大量傳播前建議加 App Check/Turnstile 等防濫用控制。
+    match /christmas2026/main/publicMeals/{mealId} {
+      allow get, list: if true;
+      allow create: if request.resource.data.keys().hasAll([
+          'branch','service','mealName','unitPrice','totalBudget','note','imageData','createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'branch','service','mealName','unitPrice','totalBudget','note','imageData','createdAt'
+        ])
+        && request.resource.data.branch in ['江翠','新莊','林口']
+        && request.resource.data.service in ['晚崇','青崇','主日']
+        && (request.resource.data.branch == '江翠' || request.resource.data.service != '晚崇')
+        && request.resource.data.mealName is string
+        && request.resource.data.mealName.size() > 0
+        && request.resource.data.mealName.size() <= 80
+        && request.resource.data.unitPrice is int
+        && request.resource.data.unitPrice >= 0
+        && request.resource.data.unitPrice <= 100000
+        && request.resource.data.totalBudget is int
+        && request.resource.data.totalBudget >= 0
+        && request.resource.data.totalBudget <= 5000000
+        && request.resource.data.note is string
+        && request.resource.data.note.size() <= 500
+        && request.resource.data.imageData is string
+        && request.resource.data.imageData.size() > 100
+        && request.resource.data.imageData.size() <= 135000
+        && request.resource.data.imageData.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if superuser();
+    }
     match /christmas2026/main/logs/{logId} {
       allow get, list: if staff();
       allow create: if staff()
