@@ -1,100 +1,126 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 第一版：所有 @twclc.org 已驗證 Google 帳號可填報；只有以下兩個帳號能核准／解鎖。
-    function staff() {
+
+    // Everyone can read submitted project data and submit new records.
+    // Only these two verified Google accounts can DELETE records.
+    function isAdmin() {
       return request.auth != null
         && request.auth.token.email_verified == true
-        && request.auth.token.email is string
-        && request.auth.token.email.matches('.*@twclc[.]org$');
+        && (request.auth.token.email == 'darren.lin@twclc.org' || request.auth.token.email == 'darren710404@twclc.org');
     }
-    function superuser() {
-      return staff() && (
-        request.auth.token.email == 'darren.lin@twclc.org'
-        || request.auth.token.email == 'darren710404@twclc.org'
-      );
+
+    function shortString(value, maxLength) {
+      return value is string && value.size() <= maxLength;
     }
-    function draftOrSubmitted() {
-      return request.resource.data.status in ['draft', 'submitted'];
+
+    function validWorkUpdate() {
+      let d = request.resource.data;
+      let f = d.fields;
+      return d.keys().hasAll(['sectionId', 'fields', 'reporter', 'submittedAt'])
+        && d.keys().hasOnly(['sectionId', 'fields', 'reporter', 'submittedAt'])
+        && d.sectionId is string
+        && d.sectionId.matches('^(central|honghui-kit|honghui-sa1|honghui-sa2|honghui-su1|honghui-su2)$')
+        && shortString(d.reporter, 50)
+        && f is map
+        && f.keys().hasOnly([
+          'couponStatus', 'stickerStatus', 'giftCount', 'giftStatus',
+          'refreshmentStatus', 'leader', 'team', 'people', 'notes'
+        ])
+        && shortString(f.get('couponStatus', ''), 50)
+        && shortString(f.get('stickerStatus', ''), 50)
+        && shortString(f.get('giftCount', ''), 12)
+        && shortString(f.get('giftStatus', ''), 50)
+        && shortString(f.get('refreshmentStatus', ''), 50)
+        && shortString(f.get('leader', ''), 250)
+        && shortString(f.get('team', ''), 250)
+        && shortString(f.get('people', ''), 12)
+        && shortString(f.get('notes', ''), 1200)
+        && d.submittedAt == request.time;
     }
-    // 將管理員確認後的鎖定實際施加在伺服器，不依賴前端按鈕隱藏。
+
+    // Existing project sections are readable, but new submissions are append-only.
     match /christmas2026/main/sections/{sectionId} {
-      allow get, list: if staff();
-      allow create: if staff() && (superuser() || draftOrSubmitted())
-        && request.resource.data.updatedBy == request.auth.token.email
-        && (request.resource.data.status != 'submitted'
-          || request.resource.data.lastSubmittedBy == request.auth.token.email);
-      allow update: if superuser()
-        || (staff() && resource.data.status != 'confirmed'
-          && draftOrSubmitted()
-          && request.resource.data.updatedBy == request.auth.token.email
-          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['approvedBy','approvedAt'])
-          && (request.resource.data.status != 'submitted'
-            || request.resource.data.lastSubmittedBy == request.auth.token.email));
-      allow delete: if false;
+      allow get, list: if true;
+      allow create, update: if false;
+      allow delete: if isAdmin();
     }
+
+    match /christmas2026/main/publicUpdates/{updateId} {
+      allow get, list: if true;
+      allow create: if validWorkUpdate();
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
     match /christmas2026/main/counts/{countId} {
-      allow get, list: if staff();
-      allow create: if staff()
-        && request.resource.data.status == 'submitted'
-        && request.resource.data.createdBy == request.auth.token.email
-        && request.resource.data.lastSubmittedBy == request.auth.token.email
-        && request.resource.data.actorUid == request.auth.uid
+      allow get, list: if true;
+      allow create: if request.resource.data.keys().hasAll([
+          'date', 'branch', 'service', 'reporter', 'note', 'count', 'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'date', 'branch', 'service', 'reporter', 'note', 'count', 'createdAt'
+        ])
+        && request.resource.data.date is string
+        && request.resource.data.date.matches('^2026-12-(05|06|12|13|19|20|26|27)$')
+        && shortString(request.resource.data.branch, 30)
+        && request.resource.data.branch.size() > 0
+        && shortString(request.resource.data['service'], 70)
+        && request.resource.data['service'].size() > 0
+        && shortString(request.resource.data.reporter, 50)
+        && request.resource.data.reporter.size() > 0
+        && shortString(request.resource.data.note, 500)
         && request.resource.data.count is int
         && request.resource.data.count >= 0
-        && request.resource.data.count <= 5000;
-      allow update: if superuser();
-      allow delete: if superuser();
-    }
-    match /christmas2026/main/photos/{photoId} {
-      allow get, list: if staff();
-      allow create: if staff()
-        && request.resource.data.createdBy == request.auth.token.email
-        && request.resource.data.sectionId in ['meal-jiangcui','meal-xinzhuang','meal-linkou']
-        && request.resource.data.dataUrl is string
-        && request.resource.data.dataUrl.size() <= 290000
-        && request.resource.data.dataUrl.matches('data:image/jpeg;base64,.*');
+        && request.resource.data.count <= 5000
+        && request.resource.data.createdAt == request.time;
       allow update: if false;
-      allow delete: if superuser();
+      allow delete: if isAdmin();
     }
-    // 公開餐點：任何訪客只可新增格式受限的餐點提案，無法更動或刪除他人的資料。
-    // 注意：免登入公開寫入仍可能遭到灌資料；正式對外大量傳播前建議加 App Check/Turnstile 等防濫用控制。
+
+    // Existing photos are kept for compatibility, but new meal photos go into publicMeals.
+    match /christmas2026/main/photos/{photoId} {
+      allow get, list: if isAdmin();
+      allow create, update: if false;
+      allow delete: if isAdmin();
+    }
+
     match /christmas2026/main/publicMeals/{mealId} {
       allow get, list: if true;
       allow create: if request.resource.data.keys().hasAll([
-          'branch','service','mealName','unitPrice','totalBudget','note','imageData','createdAt'
+          'branch', 'service', 'mealName', 'unitPrice',
+          'totalBudget', 'note', 'imageData', 'createdAt'
         ])
         && request.resource.data.keys().hasOnly([
-          'branch','service','mealName','unitPrice','totalBudget','note','imageData','createdAt'
+          'branch', 'service', 'mealName', 'unitPrice',
+          'totalBudget', 'note', 'imageData', 'createdAt'
         ])
-        && request.resource.data.branch in ['江翠','新莊','林口']
-        && request.resource.data.service in ['晚崇','青崇','主日']
-        && (request.resource.data.branch == '江翠' || request.resource.data.service != '晚崇')
-        && request.resource.data.mealName is string
+        && shortString(request.resource.data.branch, 30)
+        && request.resource.data.branch.size() > 0
+        && shortString(request.resource.data['service'], 30)
+        && request.resource.data['service'].size() > 0
+        && shortString(request.resource.data.mealName, 80)
         && request.resource.data.mealName.size() > 0
-        && request.resource.data.mealName.size() <= 80
         && request.resource.data.unitPrice is int
         && request.resource.data.unitPrice >= 0
         && request.resource.data.unitPrice <= 100000
         && request.resource.data.totalBudget is int
         && request.resource.data.totalBudget >= 0
         && request.resource.data.totalBudget <= 5000000
-        && request.resource.data.note is string
-        && request.resource.data.note.size() <= 500
+        && shortString(request.resource.data.note, 500)
         && request.resource.data.imageData is string
         && request.resource.data.imageData.size() > 100
         && request.resource.data.imageData.size() <= 135000
         && request.resource.data.imageData.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
         && request.resource.data.createdAt == request.time;
-      allow update, delete: if superuser();
+      allow update: if false;
+      allow delete: if isAdmin();
     }
+
+    // Private legacy audit logs: new public submissions do not write to this collection.
     match /christmas2026/main/logs/{logId} {
-      allow get, list: if staff();
-      allow create: if staff()
-        && request.resource.data.actorUid == request.auth.uid
-        && request.resource.data.actorEmail == request.auth.token.email
-        && request.resource.data.timestamp == request.time;
-      allow update, delete: if false;
+      allow get, list: if isAdmin();
+      allow create, update, delete: if false;
     }
   }
 }

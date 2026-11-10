@@ -60,3 +60,11 @@
 .meal-list-heading a{font-size:12px;color:#8f6b30}
 @media(max-width:850px){.public-meal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.meals-showcase{padding-block:0 48px}.public-meal-grid{grid-template-columns:1fr}.public-meal-image{height:210px}.meal-public-form{padding:17px}.meal-form-top{flex-direction:column;gap:9px}.meal-selectors{grid-template-columns:1fr}.meal-entry-fields{grid-template-columns:1fr;gap:13px}.meal-picture{min-height:150px}.meal-picture img{max-height:180px;height:auto}.meal-form-actions{align-items:stretch}.meal-form-actions button{flex:1;padding-inline:8px}.meal-prices{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Public submit / administrator-only delete controls. */
+.editor-reporter{margin-top:19px}
+.editor-reporter label{display:flex;flex-direction:column;gap:6px;color:#566356;font-size:12px;font-weight:700}
+.editor-reporter input{border:1px solid #d9ddd5;border-radius:8px;padding:10px 12px;width:100%;font-size:14px;background:#fff;color:#26352b}
+.admin-actions{margin-top:12px;text-align:right}
+.admin-remove{font:inherit;font-size:11px;border:1px solid #e4c6bd;border-radius:7px;padding:6px 10px;background:#fff7f4;color:#995744;white-space:nowrap}
+.admin-remove:hover{background:#ffece6}

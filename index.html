@@ -61,7 +61,7 @@
       </div>
     </section>
     <section id="workstreams" class="section-pad container">
-      <div class="section-heading"><div><span class="kicker">WORKSTREAMS</span><h2>工作進度與資料</h2></div><p>餐點提案免登入、送出即公開；其他工作資料沿用原本的登入與確認流程。</p></div>
+      <div class="section-heading"><div><span class="kicker">WORKSTREAMS</span><h2>工作進度與資料</h2></div><p>所有填報免登入，送出後直接公開；只有管理者可以刪除資料。</p></div>
       <div class="deadline-banner"><span class="deadline-icon">◎</span><div><b>11/20（五）餐點提交截止</b><span>請各分堂上傳餐點照片，並填寫單價與預計總預算。</span></div><a href="#meals">查看餐點規劃 ↗</a></div>
       <div id="central" class="block-heading"><div><span class="kicker">01 / CENTRAL</span><h3>中央統一提供</h3></div><p>聖誕季餐點兌換券、聖誕季貼紙</p></div>
       <div id="centralCards" class="items-grid"></div>
@@ -86,10 +86,10 @@
     </section>
     <section id="attendees" class="count-section section-pad">
       <div class="container">
-        <div class="section-heading"><div><span class="kicker">NEW FRIENDS</span><h2>新人人數回報</h2></div><p>每場活動分別回報；正式資料同步 Firestore，並納入確認紀錄。</p></div>
+        <div class="section-heading"><div><span class="kicker">NEW FRIENDS</span><h2>新人人數回報</h2></div><p>每場活動分別回報，免登入送出後立即公開並自動計入總數。</p></div>
         <div class="count-layout">
           <div class="count-panel">
-            <div class="count-panel-head"><h3>新增人數回報</h3><span id="formRole">登入後可填寫</span></div><a id="originalFormLink" class="original-form-link" hidden target="_blank" rel="noopener noreferrer" href="https://docs.google.com/forms/d/1AzTEkqxydEYL1uA6kmDsQEg2PhH6r7Fv-rdm6vgZbAQ/edit">↗ 原 Google 表單（管理者參考）</a>
+            <div class="count-panel-head"><h3>新增人數回報</h3><span id="formRole">免登入 · 直接公開</span></div><a id="originalFormLink" class="original-form-link" hidden target="_blank" rel="noopener noreferrer" href="https://docs.google.com/forms/d/1AzTEkqxydEYL1uA6kmDsQEg2PhH6r7Fv-rdm6vgZbAQ/edit">↗ 原 Google 表單（管理者參考）</a>
             <form id="countForm" class="form-grid">
               <label>活動日期<select id="countDate" name="date" required><option value="">選擇日期</option></select></label>
               <label>分堂／活動<select id="countBranch" name="branch" required><option value="">選擇分堂</option><option value="江翠">江翠</option><option value="新莊">新莊</option><option value="林口">林口</option><option value="宏匯聖誕">宏匯聖誕</option></select></label>
@@ -97,7 +97,7 @@
               <label>新朋友人數<input id="countNumber" name="count" type="number" min="0" max="5000" step="1" placeholder="0" required></label>
               <label class="full">填報人<input id="countReporter" name="reporter" maxlength="50" placeholder="姓名" required></label>
               <label class="full">備註（選填）<textarea id="countNote" name="note" rows="2" maxlength="500" placeholder="例如：同場帶來者、需後續關懷資訊（請勿填個資）"></textarea></label>
-              <div class="full"><button class="primary-btn" id="countSubmit" type="submit" disabled>送出人數回報</button><small>送出後通知管理員確認；再次修正請由 Superuser 處理。</small></div>
+              <div class="full"><button class="primary-btn" id="countSubmit" type="submit">送出人數回報</button><small>送出後立即公開；填錯請通知管理者刪除，再重新填報。</small></div>
             </form>
           </div>
           <div class="count-summary">
@@ -109,15 +109,23 @@
       </div>
     </section>
     <section id="activity" class="container section-pad">
-      <div class="section-heading"><div><span class="kicker">APPROVAL & HISTORY</span><h2>待確認與異動紀錄</h2></div><p>按下「送出確認」後才會發通知；自動儲存草稿不會重複寄信。</p></div>
-      <div class="activity-grid"><div><h3 class="small-title">待確認項目</h3><div id="pendingList" class="activity-list"></div></div><div><h3 class="small-title">最近修改紀錄</h3><div id="logList" class="activity-list"></div></div></div>
+      <div class="section-heading"><div><span class="kicker">LATEST UPDATES</span><h2>最新填報與提交紀錄</h2></div><p>所有提交立即顯示，不需審核。管理者可刪除錯誤資料。</p></div>
+      <div class="activity-grid"><div><h3 class="small-title">各工作項目最新填報</h3><div id="pendingList" class="activity-list"></div></div><div><h3 class="small-title">最近提交紀錄</h3><div id="logList" class="activity-list"></div></div></div>
     </section>
   </main>
-  <nav class="mobile-nav" aria-label="手機快速導覽"><a href="#timeline">四週行程</a><a href="#workstreams">工作進度</a><a href="#attendees">新人回報</a><a href="#activity">審核紀錄</a></nav>
+  <nav class="mobile-nav" aria-label="手機快速導覽"><a href="#timeline">四週行程</a><a href="#workstreams">工作進度</a><a href="#attendees">新人回報</a><a href="#activity">提交紀錄</a></nav>
   <footer class="footer"><div class="container footer-inner"><div class="footer-name">THE WAY <span>2026 CHRISTMAS</span></div><div>CHANGE LIFE CHURCH · CLC PROJECT CENTER</div><a href="#overview">回到最上方 ↑</a></div></footer>
-  <dialog id="editDialog" class="edit-dialog"><form method="dialog" id="editForm"><div class="dialog-head"><div><span class="kicker" id="editKicker">EDIT ITEM</span><h2 id="editTitle">項目編輯</h2></div><button id="closeDialog" type="button" class="icon-close" aria-label="關閉">×</button></div><div id="editFields" class="dialog-fields"></div><div id="photoSection" class="photo-section" hidden><label class="photo-upload">＋ 上傳餐點照片 <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden></label><p>每個分堂最多 3 張，圖片會自動壓縮；請避免拍到人臉或敏感資訊。</p><div id="photoPreview" class="photo-grid"></div></div><div class="save-info" id="saveInfo">編輯後將保留本機草稿，10 分鐘後自動同步儲存。</div><div class="dialog-actions"><button id="saveDraft" type="button" class="secondary-btn">儲存草稿</button><button id="submitReview" type="button" class="primary-btn">送出確認</button><button id="approveItem" type="button" class="approve-btn" hidden>確認並鎖定</button><button id="unlockItem" type="button" class="secondary-btn" hidden>解除鎖定</button></div></form></dialog>
+  <dialog id="editDialog" class="edit-dialog">
+    <form id="editForm">
+      <div class="dialog-head"><div><span class="kicker" id="editKicker">PROJECT UPDATE</span><h2 id="editTitle">工作項目</h2></div><button id="closeDialog" type="button" class="icon-close" aria-label="關閉">×</button></div>
+      <div id="editFields" class="dialog-fields"></div>
+      <div class="editor-reporter"><label>填報人（選填）<input id="editReporter" maxlength="50" placeholder="姓名，可留白"></label></div>
+      <div class="save-info" id="saveInfo">填寫後直接送出公開，不需審核。</div>
+      <div class="dialog-actions"><button id="submitReview" type="button" class="primary-btn">送出並公開</button></div>
+    </form>
+  </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="app.js"></script>
+  <script type="module" src="app.js?v=20261110-public"></script>
   <script type="module" src="meal-public.js?v=20261110-fix1"></script>
 </body>
 </html>
