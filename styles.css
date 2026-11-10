@@ -93,3 +93,53 @@
 .central-asset-controls[hidden],.central-asset-preview img[hidden],.central-asset-preview span[hidden],.central-remove-button[hidden]{display:none!important}
 @media(max-width:900px){.central-layout{grid-template-columns:1fr}.central-assets{padding:15px}}
 @media(max-width:420px){.central-assets-grid{gap:9px}.central-assets-header{flex-direction:column;gap:3px}.central-asset-caption{padding:9px}.central-asset-controls{padding:8px}.central-upload-button{font-size:10px}}
+
+/* 2026-11-11 | Central photo albums + installed web app */
+.header-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.install-app-button{border:1px solid #c6a261;background:#fffaf0;color:#705322;border-radius:999px;padding:9px 13px;font-size:12px;font-weight:750;white-space:nowrap}
+.install-app-button:hover{background:#f8eacb}
+.install-app-button[hidden]{display:none!important}
+.central-asset-preview{display:block;width:calc(100% - 12px);margin:10px 6px 5px;position:relative;aspect-ratio:4/3;padding:0;border:1px solid #e0e5dc;border-radius:10px;overflow:visible;background:#eef2ec;color:#8b9487;text-align:center;isolation:isolate;transition:transform .18s,border-color .18s}
+.central-asset-preview:disabled{cursor:default}
+.central-asset-preview:not(:disabled){cursor:zoom-in}
+.central-asset-preview:not(:disabled):hover{transform:translateY(-2px);border-color:#bb994f}
+.central-asset-preview.has-multiple{margin:7px 11px 8px 1px;box-shadow:4px 4px 0 #e8d9b9,8px 8px 0 #d8c496}
+.central-asset-preview.has-multiple:after{content:"";position:absolute;inset:0;border-radius:9px;border:1px solid #d5ad68;pointer-events:none}
+.central-asset-preview img{border-radius:9px;max-width:100%;width:100%;height:100%;object-fit:contain;background:#eef2ec}
+.central-asset-preview img[hidden],.central-asset-preview span[hidden]{display:none!important}
+.central-preview-empty{position:absolute;inset:0;display:grid;place-items:center;padding:15px;font-size:12px}
+.central-photo-counter{position:absolute;right:8px;top:8px;border-radius:999px;padding:5px 9px;background:#203d32ee;color:white;font-size:11px;font-weight:750;box-shadow:0 2px 10px #1b2b2944}
+.central-preview-hint{position:absolute;bottom:8px;right:8px;background:#fffdf2ee;color:#426049;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:700}
+.central-asset-controls{display:block;padding:9px 12px 13px}
+.central-asset-controls[hidden]{display:none!important}
+.central-dropzone{border:1.5px dashed #b5a170;border-radius:10px;background:#fffaf0;padding:15px 9px;cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;transition:background .18s,border-color .18s}
+.central-dropzone strong{font-size:12px;color:#514222}
+.central-dropzone small{font-size:10px;color:#8c8065;line-height:1.5}
+.central-dropzone:hover,.central-dropzone.drag-over{border-color:#bc7b19;background:#f8edca}
+.central-dropzone.uploading{opacity:.55;cursor:wait}
+.central-upload-progress{margin:6px 0 0;color:#537052;font-size:11px;min-height:1.3em;line-height:1.5}
+.central-asset-input{position:absolute;width:1px;height:1px;clip:rect(0 0 0 0);overflow:hidden;opacity:0}
+.central-gallery-dialog{position:fixed;inset:0;width:min(920px,calc(100vw - 24px));max-width:920px;max-height:min(92dvh,950px);padding:0;background:#fffcf6;color:#22392d;border:1px solid #d8ddce;border-radius:16px;box-shadow:0 24px 80px #101b1688;overflow:auto}
+.central-gallery-dialog::backdrop,.install-help-dialog::backdrop{background:#0d1c14d9;backdrop-filter:blur(4px)}
+.central-gallery-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:17px 22px;border-bottom:1px solid #e4e6de}
+.central-gallery-head small{font-size:10px;letter-spacing:.13em;font-weight:750;color:#b38c45}
+.central-gallery-head h2{font-size:21px;margin:3px 0 0}
+.central-gallery-close,.install-help-header button{font-size:30px;line-height:1;background:none;border:0;color:#697b6b;padding:4px 8px}
+.central-gallery-stage{display:grid;grid-template-columns:50px minmax(0,1fr) 50px;gap:8px;align-items:center;padding:12px 12px 2px;min-height:220px}
+.central-gallery-stage img{display:block;object-fit:contain;max-width:100%;width:100%;height:min(58dvh,550px);background:#edf1ec;border-radius:9px}
+.central-gallery-arrow{width:43px;height:43px;border-radius:50%;border:1px solid #d9dfd0;color:#213e32;background:white;font-size:33px;line-height:1}
+.central-gallery-arrow:hover:not(:disabled){background:#f1e4c6}
+.central-gallery-arrow:disabled{opacity:.2;cursor:default}
+.central-gallery-toolbar{padding:8px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;color:#6a7969}
+.central-gallery-delete{padding:7px 11px;border-radius:7px;border:1px solid #dfc8c0;color:#925245;background:#fff5f2;font-size:11px}
+.central-gallery-delete[hidden]{display:none!important}
+.central-gallery-thumbs{display:flex;gap:10px;padding:12px 22px 18px;overflow-x:auto;scroll-snap-type:x proximity;border-top:1px solid #e7e8df}
+.gallery-thumb{width:73px;height:66px;min-width:73px;overflow:hidden;border-radius:7px;background:#ecede8;border:2px solid transparent;padding:0;scroll-snap-align:center}
+.gallery-thumb.active{border-color:#bb8e3a;box-shadow:0 0 0 2px #eed7a3}
+.gallery-thumb img{width:100%;height:100%;object-fit:cover}
+.install-help-dialog{border-radius:15px;border:1px solid #dbdfd4;max-width:min(450px,calc(100vw - 32px));padding:22px 24px;background:#fffefa;color:#254034}
+.install-help-header{display:flex;justify-content:space-between;gap:18px;align-items:center}
+.install-help-header h2{margin:0;font-size:21px}
+.install-help-dialog p{font-size:14px;line-height:1.9;color:#536b58;white-space:pre-line}
+@media(max-width:720px){.brand{gap:7px}.brand b{display:inline}.header-actions{gap:5px}.install-app-button{padding:7px 9px;font-size:10px}.auth-button{padding:7px 9px;font-size:10px}.central-gallery-stage{grid-template-columns:31px minmax(0,1fr) 31px;padding:8px 7px}.central-gallery-arrow{width:31px;height:38px;font-size:28px}.central-gallery-stage img{height:min(55dvh,450px)}.central-gallery-head{padding:13px 14px}.central-gallery-toolbar{padding-inline:12px}.central-gallery-thumbs{padding:10px 12px 15px}.gallery-thumb{width:62px;min-width:62px;height:56px}}
+@media(max-width:385px){.brand{gap:4px;letter-spacing:.06em}.brand span:last-child{font-size:8px}.install-app-button{font-size:0;padding:6px 8px}.install-app-button:after{content:"安裝";font-size:11px}.auth-button{font-size:10px}}

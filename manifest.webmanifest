@@ -1,0 +1,33 @@
+{
+  "id": "/",
+  "name": "2026 CLC 特別聖誕季｜THE WAY",
+  "short_name": "CLC Christmas",
+  "description": "四週聖誕季接待計畫、餐點與新人回報管理",
+  "lang": "zh-TW",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#203d32",
+  "theme_color": "#203d32",
+  "icons": [
+    {
+      "src": "/assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

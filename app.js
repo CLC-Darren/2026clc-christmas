@@ -115,69 +115,146 @@ function setupForm(){
   $('submitReview').addEventListener('click',submitSection)
 }
 
-// Central supplies photos: two fixed Firestore documents, public read and administrator-only write.
+// Central supplies: independent photo documents allow albums without the Firestore 1 MiB document limit.
+// Previous one-photo records are read as legacy items so no existing uploads are lost.
 const centralAssetIds=['sticker','voucher'];
-const MAX_CENTRAL_IMAGE_LENGTH=220000;
+const MAX_CENTRAL_IMAGE_LENGTH=180000;
+const albumState={photos:new Map(),activeId:null,index:0,busy:new Set()};
+const validCentralImage=data=>typeof data==='string'&&data.length<=220000&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(data);
+const centralPhotoRef=(albumId,photoId)=>doc(state.db,'christmas2026','main','centralAssets',albumId,'photos',photoId);
+function getAlbum(id){
+  const result=[];
+  const legacy=state.centralAssets.get(id);
+  if(validCentralImage(legacy?.imageData))result.push({id:'legacy',legacy:true,imageData:legacy.imageData,createdAt:legacy.updatedAt});
+  const photos=albumState.photos.get(id)||new Map();
+  for(const [photoId,p] of photos){if(validCentralImage(p.imageData))result.push({id:photoId,legacy:false,imageData:p.imageData,createdAt:p.createdAt})}
+  // Stable order: older first; legacy always first. New uploads append on the right.
+  return result.sort((a,b)=>a.legacy?-1:b.legacy?1:((a.createdAt?.seconds||0)-(b.createdAt?.seconds||0)) || a.id.localeCompare(b.id));
+}
 function renderCentralAssets(){
   for(const id of centralAssetIds){
-    const item=state.centralAssets.get(id),data=item?.imageData||'';
-    const valid=typeof data==='string'&&data.length<=MAX_CENTRAL_IMAGE_LENGTH&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(data);
-    const image=$('centralAssetImg-'+id),empty=$('centralAssetEmpty-'+id);
-    if(valid)image.src=data;else image.removeAttribute('src');
-    image.hidden=!valid;empty.hidden=valid;
-    $('centralAssetMeta-'+id).textContent=valid?('最近更新 '+(prettyTime(item.updatedAt)||'剛剛')):'尚未提供';
+    const pictures=getAlbum(id),cover=pictures[0],count=pictures.length;
+    const image=$('centralAssetImg-'+id),empty=$('centralAssetEmpty-'+id),open=$('centralAssetOpen-'+id);
+    if(cover)image.src=cover.imageData;else image.removeAttribute('src');
+    image.hidden=!cover;empty.hidden=!!cover;open.disabled=!cover;
+    open.classList.toggle('has-multiple',count>1);
+    $('centralAssetCount-'+id).hidden=!count;
+    $('centralAssetCount-'+id).textContent=count+' 張照片';
+    $('centralAssetHint-'+id).hidden=!count;
+    $('centralAssetMeta-'+id).textContent=count?('已提供 '+count+' 張 · 點擊翻閱'):'尚未提供';
     $('centralAssetControls-'+id).hidden=!admin();
-    $('centralAssetRemove-'+id).hidden=!admin()||!valid;
+    $('centralAssetDrop-'+id).classList.toggle('uploading',albumState.busy.has(id));
   }
+  if(albumState.activeId)renderCentralGallery();
 }
 async function compressCentralAsset(file){
-  if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('請使用 JPG、PNG 或 WebP 照片');
-  if(file.size>12*1024*1024)throw Error('圖片超過 12 MB，請先縮小');
+  if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('僅支援 JPG、PNG、WebP 照片');
+  if(file.size>12*1024*1024)throw Error('單張照片請勿超過 12 MB');
   const blob=URL.createObjectURL(file);
   try{
-    const image=await new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(Error('無法讀取圖片'));im.src=blob});
-    let side=1000,quality=.82;
-    for(let attempt=0;attempt<10;attempt++){
+    const image=await new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(Error('圖片無法開啟'));im.src=blob});
+    let side=960,quality=.80;
+    for(let attempt=0;attempt<12;attempt++){
       const ratio=Math.min(1,side/Math.max(image.naturalWidth,image.naturalHeight));
       const canvas=document.createElement('canvas');
       canvas.width=Math.max(1,Math.round(image.naturalWidth*ratio));
       canvas.height=Math.max(1,Math.round(image.naturalHeight*ratio));
-      const ctx=canvas.getContext('2d');
-      if(!ctx)throw Error('瀏覽器無法壓縮照片');
+      const ctx=canvas.getContext('2d');if(!ctx)throw Error('瀏覽器無法壓縮圖片');
       ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);
       ctx.drawImage(image,0,0,canvas.width,canvas.height);
       const result=canvas.toDataURL('image/jpeg',quality);
       if(result.length<=MAX_CENTRAL_IMAGE_LENGTH)return result;
-      quality=Math.max(.4,quality-.08);side=Math.round(side*.85);
+      quality=Math.max(.36,quality-.065);side=Math.max(360,Math.round(side*.84));
     }
-    throw Error('圖片壓縮後仍過大，請改用更小的照片');
+    throw Error('這張照片壓縮後仍過大，請選擇較小的圖片');
   }finally{URL.revokeObjectURL(blob)}
 }
-async function uploadCentralAsset(id,input){
-  const file=input.files?.[0];if(!file)return;
-  if(!admin()||!state.db){toast('請先使用 Superuser 帳號登入。');input.value='';return}
-  input.disabled=true;
+async function uploadCentralAssets(id,files){
+  if(!files?.length)return;
+  if(!admin()||!state.db){toast('只有管理者登入後才能上傳照片');return}
+  if(albumState.busy.has(id)){toast('目前還在上傳，請稍候');return}
+  albumState.busy.add(id);renderCentralAssets();
+  const progress=$('centralAssetProgress-'+id),input=$('centralAssetInput-'+id),drop=$('centralAssetDrop-'+id);
+  input.disabled=true;drop.setAttribute('aria-busy','true');
+  let uploaded=0;const failed=[];
   try{
-    toast('正在處理並上傳圖片…');
-    const imageData=await compressCentralAsset(file);
-    const ref=docRef('centralAssets',id);
-    await setDoc(ref,{imageData,updatedAt:serverTimestamp(),updatedBy:state.user.email});
-    const fresh=await getDocFromServer(ref);
-    if(!fresh.exists())throw Error('伺服器尚未回傳照片，請重新整理確認');
-    state.centralAssets.set(id,fresh.data());renderCentralAssets();
-    toast((id==='sticker'?'聖誕季貼紙':'餐點兌換券')+'照片已更新，所有人都能看到。');
-  }catch(e){toast('照片上傳失敗：'+safeMsg(e))}
-  finally{input.disabled=false;input.value=''}
+    for(let i=0;i<files.length;i++){
+      progress.textContent=`正在上傳第 ${i+1} / ${files.length} 張…`;
+      try{
+        const imageData=await compressCentralAsset(files[i]);
+        await addDoc(collection(state.db,'christmas2026','main','centralAssets',id,'photos'),{
+          imageData,createdAt:serverTimestamp(),createdBy:state.user.email
+        });
+        uploaded++;
+      }catch(e){failed.push((files[i].name||`第 ${i+1} 張`)+'：'+safeMsg(e))}
+    }
+    progress.textContent=failed.length?`已加入 ${uploaded} 張；有 ${failed.length} 張失敗。`: `完成！新增 ${uploaded} 張照片。`;
+    if(uploaded)toast(`已新增 ${uploaded} 張照片，訪客現在可以翻閱。`);
+    if(failed.length){console.warn('中央照片上傳失敗',failed);toast(failed.slice(0,2).join('；'))}
+  }finally{albumState.busy.delete(id);input.disabled=false;input.value='';drop.removeAttribute('aria-busy');renderCentralAssets()}
 }
-async function removeCentralAsset(id){
-  if(!admin()||!state.db||!confirm('確定移除這張物資照片？'))return;
-  try{await deleteDoc(docRef('centralAssets',id));state.centralAssets.delete(id);renderCentralAssets();toast('照片已移除。')}
-  catch(e){toast('移除失敗：'+safeMsg(e))}
+function renderCentralGallery(){
+  const id=albumState.activeId;if(!id)return;
+  const images=getAlbum(id),dlg=$('centralGalleryDialog');
+  if(!images.length){dlg.close();albumState.activeId=null;return}
+  albumState.index=Math.min(Math.max(albumState.index,0),images.length-1);
+  const photo=images[albumState.index];
+  $('centralGalleryTitle').textContent=id==='sticker'?'聖誕季貼紙':'餐點兌換券';
+  $('centralGalleryImage').src=photo.imageData;
+  $('centralGalleryImage').alt=`${$('centralGalleryTitle').textContent}　第 ${albumState.index+1} 張`;
+  $('centralGalleryPosition').textContent=`${albumState.index+1} / ${images.length}`;
+  $('centralGalleryPrev').disabled=images.length<=1;
+  $('centralGalleryNext').disabled=images.length<=1;
+  $('centralGalleryDelete').hidden=!admin();
+  $('centralGalleryThumbs').innerHTML=images.map((p,i)=>`<button type="button" class="gallery-thumb ${i===albumState.index?'active':''}" data-gallery-index="${i}" aria-label="查看第 ${i+1} 張照片" aria-pressed="${i===albumState.index}"><img src="${p.imageData}" alt="第 ${i+1} 張照片"></button>`).join('');
+  for(const button of $('centralGalleryThumbs').querySelectorAll('[data-gallery-index]'))button.addEventListener('click',()=>{albumState.index=Number(button.dataset.galleryIndex);renderCentralGallery()});
+  const active=$('centralGalleryThumbs').querySelector('.active');active?.scrollIntoView({block:'nearest',inline:'nearest'});
+}
+function openCentralGallery(id){
+  if(!getAlbum(id).length)return;
+  albumState.activeId=id;albumState.index=0;
+  const dlg=$('centralGalleryDialog');if(!dlg.open)dlg.showModal();renderCentralGallery();
+}
+function moveCentralGallery(delta){
+  if(!albumState.activeId)return;
+  const len=getAlbum(albumState.activeId).length;
+  if(len<2)return;
+  albumState.index=(albumState.index+delta+len)%len;
+  renderCentralGallery();
+}
+async function deleteCentralGalleryPhoto(){
+  const id=albumState.activeId,photos=id?getAlbum(id):[];
+  const photo=photos[albumState.index];
+  if(!admin()||!state.db||!photo)return;
+  if(!confirm('確定刪除這張照片？其他已上傳的照片會保留。'))return;
+  const button=$('centralGalleryDelete');button.disabled=true;
+  try{
+    if(photo.legacy)await deleteDoc(docRef('centralAssets',id));
+    else await deleteDoc(centralPhotoRef(id,photo.id));
+    toast('已刪除這張照片。');
+  }catch(e){toast('刪除失敗：'+safeMsg(e))}
+  finally{button.disabled=false}
 }
 for(const id of centralAssetIds){
-  $('centralAssetInput-'+id).addEventListener('change',e=>uploadCentralAsset(id,e.currentTarget));
-  $('centralAssetRemove-'+id).addEventListener('click',()=>removeCentralAsset(id));
+  const drop=$('centralAssetDrop-'+id),input=$('centralAssetInput-'+id);
+  $('centralAssetOpen-'+id).addEventListener('click',()=>openCentralGallery(id));
+  input.addEventListener('change',e=>uploadCentralAssets(id,Array.from(e.currentTarget.files||[])));
+  drop.addEventListener('click',e=>{if(e.target!==input && admin()&&!albumState.busy.has(id))input.click()});
+  drop.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ') && admin()){e.preventDefault();input.click()}});
+  for(const kind of ['dragenter','dragover'])drop.addEventListener(kind,e=>{e.preventDefault();if(admin())drop.classList.add('drag-over')});
+  drop.addEventListener('dragleave',e=>{e.preventDefault();if(!drop.contains(e.relatedTarget))drop.classList.remove('drag-over')});
+  drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('drag-over');if(admin())uploadCentralAssets(id,Array.from(e.dataTransfer?.files||[]))});
 }
+$('centralGalleryClose').addEventListener('click',()=>$('centralGalleryDialog').close());
+$('centralGalleryPrev').addEventListener('click',()=>moveCentralGallery(-1));
+$('centralGalleryNext').addEventListener('click',()=>moveCentralGallery(1));
+$('centralGalleryDelete').addEventListener('click',deleteCentralGalleryPhoto);
+$('centralGalleryDialog').addEventListener('close',()=>{albumState.activeId=null;$('centralGalleryImage').removeAttribute('src')});
+$('centralGalleryDialog').addEventListener('click',e=>{if(e.target===$('centralGalleryDialog'))$('centralGalleryDialog').close()});
+$('centralGalleryDialog').addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){e.preventDefault();moveCentralGallery(-1)}else if(e.key==='ArrowRight'){e.preventDefault();moveCentralGallery(1)}});
+let galleryTouchX=null;
+$('centralGalleryImage').addEventListener('touchstart',e=>{galleryTouchX=e.changedTouches[0]?.screenX??null},{passive:true});
+$('centralGalleryImage').addEventListener('touchend',e=>{if(galleryTouchX===null)return;const delta=e.changedTouches[0].screenX-galleryTouchX;if(Math.abs(delta)>50)moveCentralGallery(delta<0?1:-1);galleryTouchX=null},{passive:true});
 
 setupForm();renderLogin();
 if(configured){const app=getApps()[0]||initializeApp(firebaseConfig);state.db=getFirestore(app);state.auth=getAuth(app);renderLogin();
@@ -188,4 +265,11 @@ if(configured){const app=getApps()[0]||initializeApp(firebaseConfig);state.db=ge
   sub('publicUpdates',snap=>{state.updates=new Map(snap.docs.map(d=>[d.id,d.data()]));renderSections()});
   sub('counts',snap=>{state.counts=new Map(snap.docs.map(d=>[d.id,d.data()]));renderCounts()});
   sub('centralAssets',snap=>{state.centralAssets=new Map(snap.docs.map(d=>[d.id,d.data()]));renderCentralAssets()});
+  // Listen to each album's individual photos; the legacy single-photo documents remain visible.
+  for(const albumId of centralAssetIds){
+    onSnapshot(collection(state.db,'christmas2026','main','centralAssets',albumId,'photos'),snap=>{
+      albumState.photos.set(albumId,new Map(snap.docs.map(d=>[d.id,d.data()])));
+      renderCentralAssets();
+    },err=>{console.error('Album read failed',albumId,err);toast('照片相簿讀取失敗，請確認 Firestore Rules 已 Publish。')});
+  }
 }

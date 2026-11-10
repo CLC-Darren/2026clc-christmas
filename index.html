@@ -6,7 +6,10 @@
   <meta name="theme-color" content="#203d32">
   <meta name="description" content="2026 CLC 特別聖誕季｜四週活動、接待進度、餐點規劃與新人人數回報。">
   <title>2026 CLC 特別聖誕季｜THE WAY</title>
-  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon.svg?v=20261111" sizes="any" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon-32.png?v=20261111" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -19,7 +22,10 @@
       <a href="#attendees">新人人數</a>
       <a href="#activity">修改紀錄</a>
     </nav>
-    <button id="authButton" class="auth-button" type="button">登入管理</button>
+    <div class="header-actions">
+      <button id="installAppButton" class="install-app-button" type="button" aria-label="將聖誕季網站安裝到裝置">↓ 安裝到桌面</button>
+      <button id="authButton" class="auth-button" type="button">登入管理</button>
+    </div>
   </header>
   <main id="overview">
     <section class="hero">
@@ -67,24 +73,38 @@
       <div class="central-layout">
         <div id="centralCards" class="items-grid"></div>
         <aside class="central-assets" aria-label="中央提供物資照片">
-          <div class="central-assets-header"><strong>物資照片</strong><small>所有人可查看；僅管理者可上傳與更換</small></div>
+          <div class="central-assets-header"><strong>物資照片</strong><small>點開可翻閱相簿；只有管理者可新增與刪除</small></div>
           <div class="central-assets-grid">
             <section class="central-asset-card" aria-labelledby="centralAssetName-sticker">
-              <div class="central-asset-preview"><img id="centralAssetImg-sticker" alt="聖誕季貼紙照片" hidden><span id="centralAssetEmpty-sticker">尚未上傳照片</span></div>
+              <button id="centralAssetOpen-sticker" class="central-asset-preview" type="button" disabled aria-label="開啟聖誕季貼紙照片相簿">
+                <img id="centralAssetImg-sticker" alt="聖誕季貼紙照片" hidden>
+                <span id="centralAssetEmpty-sticker" class="central-preview-empty">尚未上傳照片</span>
+                <span id="centralAssetCount-sticker" class="central-photo-counter" hidden>1 張</span>
+                <span id="centralAssetHint-sticker" class="central-preview-hint" hidden>點擊查看相簿　↗</span>
+              </button>
               <div class="central-asset-caption"><b id="centralAssetName-sticker">聖誕季貼紙</b><small id="centralAssetMeta-sticker">尚未提供</small></div>
-              <div class="central-asset-controls" id="centralAssetControls-sticker" hidden>
-                <label for="centralAssetInput-sticker" class="central-upload-button">上傳／更換照片</label>
-                <input id="centralAssetInput-sticker" class="central-asset-input" type="file" accept="image/jpeg,image/png,image/webp" aria-label="上傳聖誕季貼紙照片">
-                <button id="centralAssetRemove-sticker" class="central-remove-button" type="button" hidden>移除</button>
+              <div id="centralAssetControls-sticker" class="central-asset-controls" hidden>
+                <div id="centralAssetDrop-sticker" class="central-dropzone" role="button" tabindex="0" aria-label="拖放或選擇多張聖誕季貼紙照片">
+                  <strong>＋ 新增照片</strong><small>拖曳到這裡，或點擊選擇多張</small>
+                  <input id="centralAssetInput-sticker" class="central-asset-input" type="file" multiple accept="image/jpeg,image/png,image/webp" aria-label="選擇聖誕季貼紙照片（可多選）">
+                </div>
+                <p id="centralAssetProgress-sticker" class="central-upload-progress" role="status" aria-live="polite"></p>
               </div>
             </section>
             <section class="central-asset-card" aria-labelledby="centralAssetName-voucher">
-              <div class="central-asset-preview"><img id="centralAssetImg-voucher" alt="聖誕季餐點兌換券照片" hidden><span id="centralAssetEmpty-voucher">尚未上傳照片</span></div>
+              <button id="centralAssetOpen-voucher" class="central-asset-preview" type="button" disabled aria-label="開啟餐點兌換券照片相簿">
+                <img id="centralAssetImg-voucher" alt="餐點兌換券照片" hidden>
+                <span id="centralAssetEmpty-voucher" class="central-preview-empty">尚未上傳照片</span>
+                <span id="centralAssetCount-voucher" class="central-photo-counter" hidden>1 張</span>
+                <span id="centralAssetHint-voucher" class="central-preview-hint" hidden>點擊查看相簿　↗</span>
+              </button>
               <div class="central-asset-caption"><b id="centralAssetName-voucher">餐點兌換券</b><small id="centralAssetMeta-voucher">尚未提供</small></div>
-              <div class="central-asset-controls" id="centralAssetControls-voucher" hidden>
-                <label for="centralAssetInput-voucher" class="central-upload-button">上傳／更換照片</label>
-                <input id="centralAssetInput-voucher" class="central-asset-input" type="file" accept="image/jpeg,image/png,image/webp" aria-label="上傳餐點兌換券照片">
-                <button id="centralAssetRemove-voucher" class="central-remove-button" type="button" hidden>移除</button>
+              <div id="centralAssetControls-voucher" class="central-asset-controls" hidden>
+                <div id="centralAssetDrop-voucher" class="central-dropzone" role="button" tabindex="0" aria-label="拖放或選擇多張餐點兌換券照片">
+                  <strong>＋ 新增照片</strong><small>拖曳到這裡，或點擊選擇多張</small>
+                  <input id="centralAssetInput-voucher" class="central-asset-input" type="file" multiple accept="image/jpeg,image/png,image/webp" aria-label="選擇餐點兌換券照片（可多選）">
+                </div>
+                <p id="centralAssetProgress-voucher" class="central-upload-progress" role="status" aria-live="polite"></p>
               </div>
             </section>
           </div>
@@ -149,8 +169,20 @@
       <div class="dialog-actions"><button id="submitReview" type="button" class="primary-btn">送出並公開</button></div>
     </form>
   </dialog>
+  <dialog id="centralGalleryDialog" class="central-gallery-dialog" aria-label="物資照片相簿">
+    <div class="central-gallery-head"><div><small>CHRISTMAS 2026 · PHOTO GALLERY</small><h2 id="centralGalleryTitle">物資照片</h2></div><button id="centralGalleryClose" class="central-gallery-close" type="button" aria-label="關閉相簿">×</button></div>
+    <div class="central-gallery-stage">
+      <button id="centralGalleryPrev" class="central-gallery-arrow" type="button" aria-label="上一張照片">‹</button>
+      <img id="centralGalleryImage" alt="物資照片放大檢視">
+      <button id="centralGalleryNext" class="central-gallery-arrow" type="button" aria-label="下一張照片">›</button>
+    </div>
+    <div class="central-gallery-toolbar"><span id="centralGalleryPosition">1 / 1</span><button id="centralGalleryDelete" class="central-gallery-delete" type="button" hidden>管理者刪除這張照片</button></div>
+    <div id="centralGalleryThumbs" class="central-gallery-thumbs" aria-label="照片縮圖，可選擇瀏覽"></div>
+  </dialog>
+  <dialog id="installHelpDialog" class="install-help-dialog" aria-labelledby="installHelpTitle"><div class="install-help-header"><h2 id="installHelpTitle">安裝到裝置</h2><button id="installHelpClose" type="button" aria-label="關閉說明">×</button></div><p id="installHelpText"></p><button type="button" id="installHelpDone" class="primary-btn">知道了</button></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="app.js?v=20261110-centralassets"></script>
+  <script type="module" src="app.js?v=20261111-gallery"></script>
   <script type="module" src="meal-public.js?v=20261110-fix1"></script>
+  <script defer src="pwa.js?v=20261111"></script>
 </body>
 </html>

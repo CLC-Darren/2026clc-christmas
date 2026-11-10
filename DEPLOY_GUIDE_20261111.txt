@@ -1,0 +1,35 @@
+2026 CLC Christmas — 整站一次更新說明（2026/11/11）
+==================================================
+此 ZIP 是整站完整檔案，可直接上傳到 GitHub Repo 根目錄，並非只含變更檔。
+
+本次更新：
+1. 中央物資照片：聖誕季貼紙、餐點兌換券，都可拖放或多選上傳多張。
+2. 照片顯示：疊放效果＋照片張數，點擊開啟彈出相簿、左右切換、縮圖快速選擇；手機可滑動切換。
+3. 一般訪客只能看照片，Superuser 可上傳、逐張刪除；既有單張照片會保留。
+4. 網站 icon、favicon 已換成聖誕樹；新增 manifest、service worker 與安裝到桌面按鈕。
+5. 原餐點、新人數、宏匯及中央工作項目功能保留，Firebase Config 完全沿用現有值。
+
+部署步驟（依英文界面）：
+A. GitHub → CLC-Darren / 2026clc-christmas → Add file → Upload files。
+   請先把這份 ZIP 解壓縮，選取解壓縮根目錄內「全部檔案與資料夾」上傳。
+   必須保留 assets/ 和 functions/ 的目錄結構，最後點 Commit changes。
+   注意：GitHub 網頁上傳會覆蓋同名檔，但不刪除原來沒有覆蓋的舊檔。
+B. Firebase Console → clc-christmas → Firestore Database → Rules。
+   將本 ZIP 的 firestore.rules 全部複製貼上 → Publish。
+   （因新增了 centralAssets/{sticker|voucher}/photos 子集合，舊 Rules 不會允許新相片上傳。）
+C. Cloudflare Pages → Deployments，確認最新 Production 顯示 Success。
+   若 favicon 未更新，按 Ctrl+F5；已安裝的圖示可能需移除舊安裝、重新安裝才會刷新。
+
+注意：
+- 兩位管理者仍是 darren.lin@twclc.org / darren710404@twclc.org。
+- Firestore 每張照片獨立一筆，可連續新增多張，但請留意 Spark 免費讀寫配額與資料庫容量。
+- 照片轉成 JPEG 壓縮，單張限原始 12 MB；請勿上傳含有效 QR 兌換碼的照片，因訪客都能檢視。
+- PWA「安裝到桌面」會在支援的瀏覽器叫出系統安裝視窗；iOS 等不支援時會顯示手動教學。
+- 此版不變更 Firebase Web API Key 或帳號權限，也不啟用 Storage / Blaze。
+- PWA 不保證離線資料填報，仍需網路才能載入 Firebase 和送出資料。
+
+測試步驟：
+1. 未登入：可看兩項照片／可點進相簿，但看不到拖放區、刪除鈕。
+2. Superuser 登入：試拖 2–3 張貼紙照片，檢查張數、左右箭頭、縮圖與刪除單張。
+3. 另一台裝置或無痕視窗重新整理，應能看到所有照片。
+4. 在手機上點「安裝到桌面」，測試 icon 與啟動。

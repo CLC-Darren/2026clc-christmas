@@ -82,3 +82,10 @@ https://docs.google.com/forms/d/1AzTEkqxydEYL1uA6kmDsQEg2PhH6r7Fv-rdm6vgZbAQ/edi
 Firestore Rules 是實際安全邊界，**前端顯示 Superuser 不是存取控管本身**。此專案使用了最小權限的兩級寫入規則，所有內部資料都需有效 Workspace 登入才可讀取。客戶端寫入的修改紀錄屬於作業追蹤，並非不可竄改的法律審計紀錄。請勿直接貼入包含個資的回報內容。
 
 > 本包提供可部署原始碼，但沒有替你建立 Firebase 專案或 Cloudflare 網站；網域、Firebase config 和 Email 寄送需依上述步驟實際設置。
+
+
+## 2026-11-11 更新｜相簿與 PWA
+
+中央貼紙／餐券各自支援多張拖放上傳，Firestore `centralAssets/{id}/photos` 每張一份資料。
+公開瀏覽，只有兩位 Superuser 能新增、刪除；舊 `centralAssets/{id}` 的單張圖片兼容顯示。
+安裝使用 `manifest.webmanifest`、`pwa.js`、`sw.js`；安裝服務不快取網站資料。詳見 `DEPLOY_GUIDE_20261111.txt`。

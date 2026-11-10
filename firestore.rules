@@ -134,6 +134,24 @@ service cloud.firestore {
       allow delete: if isAdmin() && (assetId == 'sticker' || assetId == 'voucher');
     }
 
+    // Album photos: each image has a separate document, so albums can grow without
+    // hitting Firestore's 1 MiB per-document limit. Public read, admins write only.
+    match /christmas2026/main/centralAssets/{assetId}/photos/{photoId} {
+      allow get, list: if true;
+      allow create: if isAdmin()
+        && (assetId == 'sticker' || assetId == 'voucher')
+        && request.resource.data.keys().hasAll(['imageData', 'createdAt', 'createdBy'])
+        && request.resource.data.keys().hasOnly(['imageData', 'createdAt', 'createdBy'])
+        && request.resource.data.imageData is string
+        && request.resource.data.imageData.size() > 100
+        && request.resource.data.imageData.size() <= 180000
+        && request.resource.data.imageData.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.createdBy == request.auth.token.email;
+      allow update: if false;
+      allow delete: if isAdmin() && (assetId == 'sticker' || assetId == 'voucher');
+    }
+
     // Private legacy audit logs: new public submissions do not write to this collection.
     match /christmas2026/main/logs/{logId} {
       allow get, list: if isAdmin();
