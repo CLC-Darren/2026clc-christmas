@@ -68,3 +68,28 @@
 .admin-actions{margin-top:12px;text-align:right}
 .admin-remove{font:inherit;font-size:11px;border:1px solid #e4c6bd;border-radius:7px;padding:6px 10px;background:#fff7f4;color:#995744;white-space:nowrap}
 .admin-remove:hover{background:#ffece6}
+
+/* Central supplies: single status card at left, two public-read photos at right. */
+.central-layout{display:grid;grid-template-columns:minmax(260px,.85fr) minmax(0,1.45fr);gap:18px;align-items:stretch}
+#centralCards{display:grid;grid-template-columns:minmax(0,1fr);align-items:stretch}
+#centralCards .item-card{height:100%}
+.central-assets{border:1px solid #e1e5db;background:#fffefa;border-radius:14px;padding:17px 19px 19px;min-width:0}
+.central-assets-header{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-bottom:14px}
+.central-assets-header strong{font-size:15px;color:var(--forest)}
+.central-assets-header small{font-size:11px;color:#7a8476;text-align:right}
+.central-assets-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.central-asset-card{min-width:0;border:1px solid #e7e9df;border-radius:11px;overflow:hidden;background:#fcfcf9}
+.central-asset-preview{position:relative;aspect-ratio:4/3;display:grid;place-items:center;background:#f1f3ec;color:#8a9688;overflow:hidden}
+.central-asset-preview img{width:100%;height:100%;object-fit:contain;display:block;background:#f1f3ec}
+.central-asset-preview span{font-size:12px;color:#9a9f95}
+.central-asset-caption{padding:10px 12px 5px;display:flex;flex-direction:column;gap:1px}
+.central-asset-caption b{font-size:13px;color:#243e30}
+.central-asset-caption small{font-size:11px;color:#879080}
+.central-asset-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px 12px}
+.central-upload-button{display:inline-flex;align-items:center;justify-content:center;padding:7px 10px;background:#e7bc6a;border-radius:7px;color:#203b2f;font-weight:750;font-size:11px;cursor:pointer}
+.central-asset-input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip-path:inset(50%)}
+.central-asset-input:focus-visible+.central-upload-button{outline:2px solid #af8330}
+.central-remove-button{border:1px solid #e5c8bb;border-radius:7px;color:#90513e;background:#fff6f3;font-size:11px;padding:6px 9px}
+.central-asset-controls[hidden],.central-asset-preview img[hidden],.central-asset-preview span[hidden],.central-remove-button[hidden]{display:none!important}
+@media(max-width:900px){.central-layout{grid-template-columns:1fr}.central-assets{padding:15px}}
+@media(max-width:420px){.central-assets-grid{gap:9px}.central-assets-header{flex-direction:column;gap:3px}.central-asset-caption{padding:9px}.central-asset-controls{padding:8px}.central-upload-button{font-size:10px}}

@@ -48,7 +48,7 @@ service cloud.firestore {
 
     match /christmas2026/main/publicUpdates/{updateId} {
       allow get, list: if true;
-      allow create: if validWorkUpdate();
+      allow create: if validWorkUpdate() && (request.resource.data.sectionId != 'central' || isAdmin());
       allow update: if false;
       allow delete: if isAdmin();
     }
@@ -115,6 +115,23 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time;
       allow update: if false;
       allow delete: if isAdmin();
+    }
+
+    // Only verified superusers may upload/replace/delete the two central-supplies images.
+    // Anyone can view these two images without signing in.
+    match /christmas2026/main/centralAssets/{assetId} {
+      allow get, list: if true;
+      allow create, update: if isAdmin()
+        && (assetId == 'sticker' || assetId == 'voucher')
+        && request.resource.data.keys().hasAll(['imageData', 'updatedAt', 'updatedBy'])
+        && request.resource.data.keys().hasOnly(['imageData', 'updatedAt', 'updatedBy'])
+        && request.resource.data.imageData is string
+        && request.resource.data.imageData.size() > 100
+        && request.resource.data.imageData.size() <= 220000
+        && request.resource.data.imageData.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.token.email;
+      allow delete: if isAdmin() && (assetId == 'sticker' || assetId == 'voucher');
     }
 
     // Private legacy audit logs: new public submissions do not write to this collection.

@@ -61,10 +61,35 @@
       </div>
     </section>
     <section id="workstreams" class="section-pad container">
-      <div class="section-heading"><div><span class="kicker">WORKSTREAMS</span><h2>工作進度與資料</h2></div><p>所有填報免登入，送出後直接公開；只有管理者可以刪除資料。</p></div>
+      <div class="section-heading"><div><span class="kicker">WORKSTREAMS</span><h2>工作進度與資料</h2></div><p>餐點、人數及宏匯接待免登入填報；中央提供由管理者更新。</p></div>
       <div class="deadline-banner"><span class="deadline-icon">◎</span><div><b>11/20（五）餐點提交截止</b><span>請各分堂上傳餐點照片，並填寫單價與預計總預算。</span></div><a href="#meals">查看餐點規劃 ↗</a></div>
       <div id="central" class="block-heading"><div><span class="kicker">01 / CENTRAL</span><h3>中央統一提供</h3></div><p>聖誕季餐點兌換券、聖誕季貼紙</p></div>
-      <div id="centralCards" class="items-grid"></div>
+      <div class="central-layout">
+        <div id="centralCards" class="items-grid"></div>
+        <aside class="central-assets" aria-label="中央提供物資照片">
+          <div class="central-assets-header"><strong>物資照片</strong><small>所有人可查看；僅管理者可上傳與更換</small></div>
+          <div class="central-assets-grid">
+            <section class="central-asset-card" aria-labelledby="centralAssetName-sticker">
+              <div class="central-asset-preview"><img id="centralAssetImg-sticker" alt="聖誕季貼紙照片" hidden><span id="centralAssetEmpty-sticker">尚未上傳照片</span></div>
+              <div class="central-asset-caption"><b id="centralAssetName-sticker">聖誕季貼紙</b><small id="centralAssetMeta-sticker">尚未提供</small></div>
+              <div class="central-asset-controls" id="centralAssetControls-sticker" hidden>
+                <label for="centralAssetInput-sticker" class="central-upload-button">上傳／更換照片</label>
+                <input id="centralAssetInput-sticker" class="central-asset-input" type="file" accept="image/jpeg,image/png,image/webp" aria-label="上傳聖誕季貼紙照片">
+                <button id="centralAssetRemove-sticker" class="central-remove-button" type="button" hidden>移除</button>
+              </div>
+            </section>
+            <section class="central-asset-card" aria-labelledby="centralAssetName-voucher">
+              <div class="central-asset-preview"><img id="centralAssetImg-voucher" alt="聖誕季餐點兌換券照片" hidden><span id="centralAssetEmpty-voucher">尚未上傳照片</span></div>
+              <div class="central-asset-caption"><b id="centralAssetName-voucher">餐點兌換券</b><small id="centralAssetMeta-voucher">尚未提供</small></div>
+              <div class="central-asset-controls" id="centralAssetControls-voucher" hidden>
+                <label for="centralAssetInput-voucher" class="central-upload-button">上傳／更換照片</label>
+                <input id="centralAssetInput-voucher" class="central-asset-input" type="file" accept="image/jpeg,image/png,image/webp" aria-label="上傳餐點兌換券照片">
+                <button id="centralAssetRemove-voucher" class="central-remove-button" type="button" hidden>移除</button>
+              </div>
+            </section>
+          </div>
+        </aside>
+      </div>
       <div id="meals" class="block-heading"><div><span class="kicker">02 / BRANCHES</span><h3>三分堂餐點與預算</h3></div><p>不需登入，每項餐點只需一張照片、名稱、單價、總預算；備註可留白。</p></div>
       <div class="tip">江翠週六參考預算 <b>NT$ 8,000</b>（約 $120／新朋友）；主日 <b>NT$ 12,000</b>（約 $100／四人桌氛圍點心）。Life Cafe 已提供甜點、鹹食及咖啡，請評估互補性。各分堂仍須向主任牧師核定預算。</div>
       <div class="meal-public-shell">
@@ -93,7 +118,7 @@
             <form id="countForm" class="form-grid">
               <label>活動日期<select id="countDate" name="date" required><option value="">選擇日期</option></select></label>
               <label>分堂／活動<select id="countBranch" name="branch" required><option value="">選擇分堂</option><option value="江翠">江翠</option><option value="新莊">新莊</option><option value="林口">林口</option><option value="宏匯聖誕">宏匯聖誕</option></select></label>
-              <label>場次<select id="countService" name="service" required><option value="">選擇場次</option><option>週六下午（學青）</option><option>週六晚上（社青）</option><option>週日早上</option><option>週日下午</option><option>其他／一般主日</option></select></label>
+              <label>場次<select id="countService" name="service" required disabled><option value="">請先選擇分堂</option></select></label>
               <label>新朋友人數<input id="countNumber" name="count" type="number" min="0" max="5000" step="1" placeholder="0" required></label>
               <label class="full">填報人<input id="countReporter" name="reporter" maxlength="50" placeholder="姓名" required></label>
               <label class="full">備註（選填）<textarea id="countNote" name="note" rows="2" maxlength="500" placeholder="例如：同場帶來者、需後續關懷資訊（請勿填個資）"></textarea></label>
@@ -125,7 +150,7 @@
     </form>
   </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="app.js?v=20261110-public"></script>
+  <script type="module" src="app.js?v=20261110-centralassets"></script>
   <script type="module" src="meal-public.js?v=20261110-fix1"></script>
 </body>
 </html>
