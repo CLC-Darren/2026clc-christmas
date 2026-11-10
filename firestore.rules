@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 第一版：所有 @twclc.org 已驗證 Google 帳號可填報；只有以下兩個帳號能核准／解鎖。
+    function staff() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email is string
+        && request.auth.token.email.matches('.*@twclc[.]org$');
+    }
+    function superuser() {
+      return staff() && (
+        request.auth.token.email == 'darren.lin@twclc.org'
+        || request.auth.token.email == 'darren710404@twclc.org'
+      );
+    }
+    function draftOrSubmitted() {
+      return request.resource.data.status in ['draft', 'submitted'];
+    }
+    // 將管理員確認後的鎖定實際施加在伺服器，不依賴前端按鈕隱藏。
+    match /christmas2026/main/sections/{sectionId} {
+      allow get, list: if staff();
+      allow create: if staff() && (superuser() || draftOrSubmitted())
+        && request.resource.data.updatedBy == request.auth.token.email
+        && (request.resource.data.status != 'submitted'
+          || request.resource.data.lastSubmittedBy == request.auth.token.email);
+      allow update: if superuser()
+        || (staff() && resource.data.status != 'confirmed'
+          && draftOrSubmitted()
+          && request.resource.data.updatedBy == request.auth.token.email
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['approvedBy','approvedAt'])
+          && (request.resource.data.status != 'submitted'
+            || request.resource.data.lastSubmittedBy == request.auth.token.email));
+      allow delete: if false;
+    }
+    match /christmas2026/main/counts/{countId} {
+      allow get, list: if staff();
+      allow create: if staff()
+        && request.resource.data.status == 'submitted'
+        && request.resource.data.createdBy == request.auth.token.email
+        && request.resource.data.lastSubmittedBy == request.auth.token.email
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.count is int
+        && request.resource.data.count >= 0
+        && request.resource.data.count <= 5000;
+      allow update: if superuser();
+      allow delete: if superuser();
+    }
+    match /christmas2026/main/photos/{photoId} {
+      allow get, list: if staff();
+      allow create: if staff()
+        && request.resource.data.createdBy == request.auth.token.email
+        && request.resource.data.sectionId in ['meal-jiangcui','meal-xinzhuang','meal-linkou']
+        && request.resource.data.dataUrl is string
+        && request.resource.data.dataUrl.size() <= 290000
+        && request.resource.data.dataUrl.matches('data:image/jpeg;base64,.*');
+      allow update: if false;
+      allow delete: if superuser();
+    }
+    match /christmas2026/main/logs/{logId} {
+      allow get, list: if staff();
+      allow create: if staff()
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.actorEmail == request.auth.token.email
+        && request.resource.data.timestamp == request.time;
+      allow update, delete: if false;
+    }
+  }
+}

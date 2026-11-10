@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#203d32">
+  <meta name="description" content="2026 CLC 特別聖誕季｜四週活動、接待進度、餐點規劃與新人人數回報。">
+  <title>2026 CLC 特別聖誕季｜THE WAY</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#overview">跳至主要內容</a>
+  <header class="topbar">
+    <a href="#overview" class="brand"><span class="brand-mark">CLC</span><span class="brand-divider"></span><span>CHRISTMAS <b>2026</b></span></a>
+    <nav class="mainnav" aria-label="主要導覽">
+      <a href="#timeline">活動時間</a>
+      <a href="#workstreams">工作進度</a>
+      <a href="#attendees">新人人數</a>
+      <a href="#activity">修改紀錄</a>
+    </nav>
+    <button id="authButton" class="auth-button" type="button">登入管理</button>
+  </header>
+  <main id="overview">
+    <section class="hero">
+      <div class="hero-glow"></div>
+      <div class="container hero-content">
+        <div class="eyebrow"><span class="eyebrow-rule"></span> 2026 CLC SPECIAL CHRISTMAS</div>
+        <h1>THE WAY<span class="hero-subtitle">特別聖誕季</span></h1>
+        <p class="hero-verse">「我就是道路、真理、生命；若不藉著我，沒有人能到父那裡去。」<br><span>約翰福音 14:6</span></p>
+        <div class="hero-bottom"><span>DEC 05 <i>—</i> DEC 27, 2026</span><a class="hero-link" href="#timeline">探索四週計畫 <span aria-hidden="true">↘</span></a></div>
+      </div>
+    </section>
+    <section class="container intro-section">
+      <div class="section-header">
+        <div><span class="kicker">PROJECT BRIEF</span><h2>讓每一位新朋友，<br>感受到特別的歡迎。</h2></div>
+        <p class="section-aside">四週接待計畫，涵蓋一般主日、青晚崇與宏匯聖誕。<br>以款待、細節與清楚分工，預備溫暖的相遇。</p>
+      </div>
+      <div class="stats-grid">
+        <div class="stat"><strong>04</strong><span>活動週數</span></div>
+        <div class="stat"><strong>03</strong><span>配搭分堂</span></div>
+        <div class="stat"><strong>600<span class="plus">+</span></strong><span>宏匯預估新朋友</span></div>
+        <div class="stat"><strong id="totalPeople">—</strong><span>已回報新人人數</span></div>
+      </div>
+      <div id="connectionNotice" class="notice" role="status">網站正在載入...</div>
+    </section>
+    <section id="timeline" class="timeline-section section-pad">
+      <div class="container">
+        <div class="section-heading"><div><span class="kicker">AT A GLANCE</span><h2>四週活動時間軸</h2></div><p>依日期往下看，點選卡片可快速前往相應工作。</p></div>
+        <div class="weeks">
+          <article class="week-card"><div class="week-number">01 <span>DEC</span></div><div class="week-body"><div class="week-label">WEEK ONE <span>12/05 – 12/06</span></div><h3>聖誕季接待・第一週</h3><p>12/05（六）青、晚崇及 12/06（日）主日新人接待</p><div class="tags"><span>江翠</span><span>新莊</span><span>林口</span></div></div><a href="#workstreams" class="week-arrow" aria-label="查看第一週接待計畫">↗</a></article>
+          <article class="week-card"><div class="week-number">02 <span>DEC</span></div><div class="week-body"><div class="week-label">WEEK TWO <span>12/12 – 12/13</span></div><h3>聖誕季接待・第二週</h3><p>12/12（六）青、晚崇及 12/13（日）主日新人接待</p><div class="tags"><span>餐點升級</span><span>整桌氛圍點心</span></div></div><a href="#meals" class="week-arrow" aria-label="查看餐點工作">↗</a></article>
+          <article class="week-card highlighted"><div class="week-number">03 <span>DEC</span></div><div class="week-body"><div class="week-label">WEEK THREE <span>12/19 – 12/20</span></div><h3>宏匯聖誕・四場聚會</h3><p>12/19（六）下午／晚上；12/20（日）早上／下午</p><div class="tags"><span>600 位預估新朋友</span><span>接待小禮物</span><span>點心與飲料</span></div></div><a href="#honghui" class="week-arrow" aria-label="查看宏匯接待">↗</a></article>
+          <article class="week-card"><div class="week-number">04 <span>DEC</span></div><div class="week-body"><div class="week-label">WEEK FOUR <span>12/26 – 12/27</span></div><h3>聖誕季接待・第四週</h3><p>12/26（六）青、晚崇及 12/27（日）主日新人接待</p><div class="tags"><span>最後接待週</span><span>餐券兌換至月底</span></div></div><a href="#workstreams" class="week-arrow" aria-label="查看第四週接待">↗</a></article>
+        </div>
+      </div>
+    </section>
+    <section id="workstreams" class="section-pad container">
+      <div class="section-heading"><div><span class="kicker">WORKSTREAMS</span><h2>工作進度與資料</h2></div><p>同工可登入填寫草稿；送出後由 Superuser 確認。已確認項目會鎖定。</p></div>
+      <div class="deadline-banner"><span class="deadline-icon">◎</span><div><b>11/20（五）餐點提交截止</b><span>請各分堂上傳餐點照片，並填寫單價與預計總預算。</span></div><a href="#meals">查看餐點規劃 ↗</a></div>
+      <div id="central" class="block-heading"><div><span class="kicker">01 / CENTRAL</span><h3>中央統一提供</h3></div><p>聖誕季餐點兌換券、聖誕季貼紙</p></div>
+      <div id="centralCards" class="items-grid"></div>
+      <div id="meals" class="block-heading"><div><span class="kicker">02 / BRANCHES</span><h3>三分堂餐點與預算</h3></div><p>餐點的「感覺」要比平常升級；建議個人點心之外，也有整桌分享的餐點。</p></div>
+      <div class="tip">江翠週六參考預算 <b>NT$ 8,000</b>（約 $120／新朋友）；主日 <b>NT$ 12,000</b>（約 $100／四人桌氛圍點心）。Life Cafe 已提供甜點、鹹食及咖啡，請評估互補性。各分堂仍須向主任牧師核定預算。</div>
+      <div id="mealCards" class="items-grid"></div>
+      <div id="honghui" class="block-heading"><div><span class="kicker">03 / HONGHUI</span><h3>宏匯聖誕接待</h3></div><p>12/19–12/20，共四場；中央準備小禮物、點心和飲料。</p></div>
+      <div id="honghuiCards" class="items-grid"></div>
+    </section>
+    <section id="attendees" class="count-section section-pad">
+      <div class="container">
+        <div class="section-heading"><div><span class="kicker">NEW FRIENDS</span><h2>新人人數回報</h2></div><p>每場活動分別回報；正式資料同步 Firestore，並納入確認紀錄。</p></div>
+        <div class="count-layout">
+          <div class="count-panel">
+            <div class="count-panel-head"><h3>新增人數回報</h3><span id="formRole">登入後可填寫</span></div><a id="originalFormLink" class="original-form-link" hidden target="_blank" rel="noopener noreferrer" href="https://docs.google.com/forms/d/1AzTEkqxydEYL1uA6kmDsQEg2PhH6r7Fv-rdm6vgZbAQ/edit">↗ 原 Google 表單（管理者參考）</a>
+            <form id="countForm" class="form-grid">
+              <label>活動日期<select id="countDate" name="date" required><option value="">選擇日期</option></select></label>
+              <label>分堂／活動<select id="countBranch" name="branch" required><option value="">選擇分堂</option><option value="江翠">江翠</option><option value="新莊">新莊</option><option value="林口">林口</option><option value="宏匯聖誕">宏匯聖誕</option></select></label>
+              <label>場次<select id="countService" name="service" required><option value="">選擇場次</option><option>週六下午（學青）</option><option>週六晚上（社青）</option><option>週日早上</option><option>週日下午</option><option>其他／一般主日</option></select></label>
+              <label>新朋友人數<input id="countNumber" name="count" type="number" min="0" max="5000" step="1" placeholder="0" required></label>
+              <label class="full">填報人<input id="countReporter" name="reporter" maxlength="50" placeholder="姓名" required></label>
+              <label class="full">備註（選填）<textarea id="countNote" name="note" rows="2" maxlength="500" placeholder="例如：同場帶來者、需後續關懷資訊（請勿填個資）"></textarea></label>
+              <div class="full"><button class="primary-btn" id="countSubmit" type="submit" disabled>送出人數回報</button><small>送出後通知管理員確認；再次修正請由 Superuser 處理。</small></div>
+            </form>
+          </div>
+          <div class="count-summary">
+            <div class="summary-head"><span>REPORT OVERVIEW</span><b id="countReportTotal">0 人</b></div>
+            <div id="countRows" class="count-rows"><p class="muted">尚無回報資料。</p></div>
+            <p class="summary-note">請勿在備註欄填入新朋友姓名、電話、住址等個人資料。本表只統計數量。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="activity" class="container section-pad">
+      <div class="section-heading"><div><span class="kicker">APPROVAL & HISTORY</span><h2>待確認與異動紀錄</h2></div><p>按下「送出確認」後才會發通知；自動儲存草稿不會重複寄信。</p></div>
+      <div class="activity-grid"><div><h3 class="small-title">待確認項目</h3><div id="pendingList" class="activity-list"></div></div><div><h3 class="small-title">最近修改紀錄</h3><div id="logList" class="activity-list"></div></div></div>
+    </section>
+  </main>
+  <nav class="mobile-nav" aria-label="手機快速導覽"><a href="#timeline">四週行程</a><a href="#workstreams">工作進度</a><a href="#attendees">新人回報</a><a href="#activity">審核紀錄</a></nav>
+  <footer class="footer"><div class="container footer-inner"><div class="footer-name">THE WAY <span>2026 CHRISTMAS</span></div><div>CHANGE LIFE CHURCH · CLC PROJECT CENTER</div><a href="#overview">回到最上方 ↑</a></div></footer>
+  <dialog id="editDialog" class="edit-dialog"><form method="dialog" id="editForm"><div class="dialog-head"><div><span class="kicker" id="editKicker">EDIT ITEM</span><h2 id="editTitle">項目編輯</h2></div><button id="closeDialog" type="button" class="icon-close" aria-label="關閉">×</button></div><div id="editFields" class="dialog-fields"></div><div id="photoSection" class="photo-section" hidden><label class="photo-upload">＋ 上傳餐點照片 <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden></label><p>每個分堂最多 3 張，圖片會自動壓縮；請避免拍到人臉或敏感資訊。</p><div id="photoPreview" class="photo-grid"></div></div><div class="save-info" id="saveInfo">編輯後將保留本機草稿，10 分鐘後自動同步儲存。</div><div class="dialog-actions"><button id="saveDraft" type="button" class="secondary-btn">儲存草稿</button><button id="submitReview" type="button" class="primary-btn">送出確認</button><button id="approveItem" type="button" class="approve-btn" hidden>確認並鎖定</button><button id="unlockItem" type="button" class="secondary-btn" hidden>解除鎖定</button></div></form></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
