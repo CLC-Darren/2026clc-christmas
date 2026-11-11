@@ -6,13 +6,13 @@ import {getFirestore,collection,doc,onSnapshot,getDocs,getDocsFromServer,setDoc,
 const $=id=>document.getElementById(id);
 const escapeHTML=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const slotMeta={
- 'jiangcui-sunday':['江翠','主日'],'jiangcui-youth':['江翠','青崇'],'jiangcui-evening':['江翠','晚崇'],
+ 'jiangcui-sunday':['江翠','主日'],'jiangcui-youth':['江翠','青、晚崇'],
  'xinzhuang-sunday':['新莊','主日'],'xinzhuang-youth':['新莊','青崇'],
  'linkou-sunday':['林口','主日'],'linkou-youth':['林口','青崇']
 };
 const groups=[
  {id:'jc-sun',name:'江翠主日',slots:['jiangcui-sunday']},
- {id:'jc-youth',name:'江翠青、晚崇',slots:['jiangcui-youth','jiangcui-evening']},
+ {id:'jc-youth',name:'江翠青、晚崇',slots:['jiangcui-youth']},
  {id:'xz-sun',name:'新莊主日',slots:['xinzhuang-sunday']},
  {id:'xz-youth',name:'新莊青崇',slots:['xinzhuang-youth']},
  {id:'lk-sun',name:'林口主日',slots:['linkou-sunday']},
@@ -27,7 +27,7 @@ const imgCol=id=>collection(state.db,'christmas2026','main','publicMeals',id,'ph
 const slotRef=id=>doc(state.db,'christmas2026','main','mealSlots',id);
 const requestRef=id=>doc(state.db,'christmas2026','main','mealChangeRequests',id);
 function shortStatus(s,error=false){const el=$('publicMealMessage');el.textContent=s;el.classList.toggle('error',error)}
-function getSlotId(branch,service){return Object.keys(slotMeta).find(id=>slotMeta[id][0]===branch&&slotMeta[id][1]===service)||null}
+function getSlotId(branch,service){if(branch==='江翠'&&(service==='青崇'||service==='晚崇'))service='青、晚崇';return Object.keys(slotMeta).find(id=>slotMeta[id][0]===branch&&slotMeta[id][1]===service)||null}
 function groupSlot(group){return state.activeTabs.get(group.id)||group.slots[0]}
 function newest(items){return items.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))[0]||null}
 function effective(slot){return state.slots.get(slot)||state.legacy.get(slot)||null}

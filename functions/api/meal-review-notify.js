@@ -6,7 +6,7 @@ const str=(r,key)=>r?.fields?.[key]?.stringValue??r?.fields?.[key]?.integerValue
 const timestamp=(r,key)=>r?.fields?.[key]?.timestampValue||'';
 const length=r=>r?.fields?.images?.arrayValue?.values?.length||0;
 const titles={
- 'jiangcui-sunday':'江翠主日','jiangcui-youth':'江翠青崇','jiangcui-evening':'江翠晚崇',
+ 'jiangcui-sunday':'江翠主日','jiangcui-youth':'江翠青、晚崇','jiangcui-evening':'江翠晚崇',
  'xinzhuang-sunday':'新莊主日','xinzhuang-youth':'新莊青崇',
  'linkou-sunday':'林口主日','linkou-youth':'林口青崇'
 };
