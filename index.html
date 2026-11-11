@@ -10,7 +10,7 @@
   <link rel="icon" href="assets/favicon-32.png?v=20261111" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261111-mealgallery">
+  <link rel="stylesheet" href="styles.css?v=20261111-category-review-v1">
 </head>
 <body>
   <a class="skip-link" href="#overview">跳至主要內容</a>
@@ -43,7 +43,7 @@
           </div>
           <div class="hero-quick-actions">
             <button id="openCountFromHero" class="hero-action-primary" type="button">＋ 回報新人人數 <span aria-hidden="true">↗</span></button>
-            <button id="openMealFromHero" class="hero-action-outline" type="button">＋ 新增餐點提案 <span aria-hidden="true">↗</span></button>
+            <a class="hero-action-outline" href="#meals-showcase">查看各分堂餐點 <span aria-hidden="true">↘</span></a>
           </div>
         </div>
         <div class="hero-bottom"><span>DEC 05 <i>—</i> DEC 27, 2026</span><a class="hero-link" href="#timeline">探索四週計畫 <span aria-hidden="true">↘</span></a></div>
@@ -63,24 +63,9 @@
       <div id="connectionNotice" class="notice" role="status">網站正在載入...</div>
     </section>
     <section id="meals-showcase" class="container meals-showcase" aria-label="已提交餐點">
-      <div class="section-heading"><div><span class="kicker">CHRISTMAS HOSPITALITY</span><h2>各分堂餐點提案</h2><p class="showcase-count">目前已上傳 <strong id="publicMealCount">0</strong> 筆餐點</p></div><button id="openMealFromShowcase" class="meals-cta" type="button">＋ 新增餐點提案 ↗</button></div>
-      <div id="featuredMeals" class="public-meal-grid" aria-live="polite"><p class="meal-empty">正在讀取餐點提案...</p></div>
-    </section>
-    <section id="timeline" class="timeline-section section-pad">
-      <div class="container">
-        <div class="section-heading"><div><span class="kicker">AT A GLANCE</span><h2>四週活動時間軸</h2></div><p>依日期往下看，點選卡片可快速前往相應工作。</p></div>
-        <div class="weeks">
-          <article class="week-card"><div class="week-number">01 <span>DEC</span></div><div class="week-body"><div class="week-label">WEEK ONE <span>12/05 – 12/06</span></div><h3>聖誕季接待・第一週</h3><p>12/05（六）青、晚崇及 12/06（日）主日新人接待</p><div class="tags"><span>江翠</span><span>新莊</span><span>林口</span></div></div><a href="#workstreams" class="week-arrow" aria-label="查看第一週接待計畫">↗</a></article>
-          <article class="week-card"><div class="week-number">02 <span>DEC</span></div><div class="week-body"><div class="week-label">WEEK TWO <span>12/12 – 12/13</span></div><h3>聖誕季接待・第二週</h3><p>12/12（六）青、晚崇及 12/13（日）主日新人接待</p><div class="tags"><span>餐點升級</span><span>整桌氛圍點心</span></div></div><a href="#meals" class="week-arrow" aria-label="查看餐點工作">↗</a></article>
-          <article class="week-card highlighted"><div class="week-number">03 <span>DEC</span></div><div class="week-body"><div class="week-label">WEEK THREE <span>12/19 – 12/20</span></div><h3>宏匯聖誕・四場聚會</h3><p>12/19（六）下午／晚上；12/20（日）早上／下午</p><div class="tags"><span>600 位預估新朋友</span><span>接待小禮物</span><span>點心與飲料</span></div></div><a href="#honghui" class="week-arrow" aria-label="查看宏匯接待">↗</a></article>
-          <article class="week-card"><div class="week-number">04 <span>DEC</span></div><div class="week-body"><div class="week-label">WEEK FOUR <span>12/26 – 12/27</span></div><h3>聖誕季接待・第四週</h3><p>12/26（六）青、晚崇及 12/27（日）主日新人接待</p><div class="tags"><span>最後接待週</span><span>餐券兌換至月底</span></div></div><a href="#workstreams" class="week-arrow" aria-label="查看第四週接待">↗</a></article>
-        </div>
-      </div>
-    </section>
-    <section id="workstreams" class="section-pad container">
-      <div class="section-heading"><div><span class="kicker">WORKSTREAMS</span><h2>工作進度與資料</h2></div><p>餐點、人數及宏匯接待免登入填報；中央提供由管理者更新。</p></div>
-      <div class="deadline-banner"><span class="deadline-icon">◎</span><div><b>11/20（五）餐點提交截止</b><span>請各分堂上傳餐點照片，並填寫單價與預計總預算。</span></div><a href="#meals">查看餐點規劃 ↗</a></div>
-      <div id="central" class="block-heading"><div><span class="kicker">01 / CENTRAL</span><h3>中央統一提供</h3></div><p>聖誕季餐點兌換券、聖誕季貼紙</p></div>
+      <div class="section-heading"><div><span class="kicker">CHRISTMAS HOSPITALITY</span><h2>各分堂餐點提案</h2><p class="showcase-count">請點選自己的分堂與聚會卡片填寫或提出修改 · 已完成 <strong id="publicMealCount">0</strong> / 7 場</p></div></div>
+      <div id="meals" class="meal-category-help">每場只保留一份正式餐點提案；首次填寫直接公開，之後修改需管理者確認。照片可直接在卡片上左右滑動，點擊照片則會開啟完整相簿。</div><div id="featuredMeals" class="public-meal-grid meal-category-grid" aria-live="polite"><p class="meal-empty">正在讀取餐點提案...</p></div>
+      <div id="central" class="block-heading central-under-meals"><div><span class="kicker">01 / CENTRAL</span><h3>中央統一提供</h3></div><p>聖誕季餐點兌換券、聖誕季貼紙</p></div>
       <div class="central-layout">
         <div id="centralCards" class="items-grid"></div>
         <aside class="central-assets" aria-label="中央提供物資照片">
@@ -121,9 +106,22 @@
           </div>
         </aside>
       </div>
-      <div id="meals" class="block-heading"><div><span class="kicker">02 / BRANCHES</span><h3>三分堂餐點與預算</h3></div><p>不需登入，每項餐點可上傳多張照片、名稱、單價、總預算；備註可留白。</p></div>
-      <div class="tip">江翠週六參考預算 <b>NT$ 8,000</b>（約 $120／新朋友）；主日 <b>NT$ 12,000</b>（約 $100／四人桌氛圍點心）。Life Cafe 已提供甜點、鹹食及咖啡，請評估互補性。各分堂仍須向主任牧師核定預算。</div>
-      <div class="meal-inline-note"><span>所有餐點會集中顯示在首頁，方便同工查看照片與預算。</span><button id="openMealFromWorkstreams" class="secondary-btn" type="button">＋ 新增餐點</button></div>
+    </section>
+    <section id="timeline" class="timeline-section section-pad">
+      <div class="container">
+        <div class="section-heading"><div><span class="kicker">AT A GLANCE</span><h2>四週活動時間軸</h2></div><p>依日期往下看，點選卡片可快速前往相應工作。</p></div>
+        <div class="weeks">
+          <article class="week-card"><div class="week-number">01 <span>DEC</span></div><div class="week-body"><div class="week-label">WEEK ONE <span>12/05 – 12/06</span></div><h3>聖誕季接待・第一週</h3><p>12/05（六）青、晚崇及 12/06（日）主日新人接待</p><div class="tags"><span>江翠</span><span>新莊</span><span>林口</span></div></div><a href="#workstreams" class="week-arrow" aria-label="查看第一週接待計畫">↗</a></article>
+          <article class="week-card"><div class="week-number">02 <span>DEC</span></div><div class="week-body"><div class="week-label">WEEK TWO <span>12/12 – 12/13</span></div><h3>聖誕季接待・第二週</h3><p>12/12（六）青、晚崇及 12/13（日）主日新人接待</p><div class="tags"><span>餐點升級</span><span>整桌氛圍點心</span></div></div><a href="#meals" class="week-arrow" aria-label="查看餐點工作">↗</a></article>
+          <article class="week-card highlighted"><div class="week-number">03 <span>DEC</span></div><div class="week-body"><div class="week-label">WEEK THREE <span>12/19 – 12/20</span></div><h3>宏匯聖誕・四場聚會</h3><p>12/19（六）下午／晚上；12/20（日）早上／下午</p><div class="tags"><span>600 位預估新朋友</span><span>接待小禮物</span><span>點心與飲料</span></div></div><a href="#honghui" class="week-arrow" aria-label="查看宏匯接待">↗</a></article>
+          <article class="week-card"><div class="week-number">04 <span>DEC</span></div><div class="week-body"><div class="week-label">WEEK FOUR <span>12/26 – 12/27</span></div><h3>聖誕季接待・第四週</h3><p>12/26（六）青、晚崇及 12/27（日）主日新人接待</p><div class="tags"><span>最後接待週</span><span>餐券兌換至月底</span></div></div><a href="#workstreams" class="week-arrow" aria-label="查看第四週接待">↗</a></article>
+        </div>
+      </div>
+    </section>
+    <section id="workstreams" class="section-pad container">
+      <div class="section-heading"><div><span class="kicker">WORKSTREAMS</span><h2>工作進度與資料</h2></div><p>分堂餐點首次填寫直接公開，後續修改要經管理者確認；新人數與宏匯填報仍免登入。</p></div>
+      <div class="deadline-banner"><span class="deadline-icon">◎</span><div><b>11/20（五）餐點提交截止</b><span>請各分堂點擊自己的分類卡片，填入餐點、照片、單價與預計總預算。</span></div><a href="#meals">查看餐點規劃 ↗</a></div>
+      <div class="tip">江翠週六參考預算 <b>NT$ 8,000</b>、主日 <b>NT$ 12,000</b>。Life Cafe 已提供甜、鹹與咖啡；各分堂仍須向主任牧師核定預算。</div>
       <div id="honghui" class="block-heading"><div><span class="kicker">03 / HONGHUI</span><h3>宏匯聖誕接待</h3></div><p>12/19–12/20，共四場；中央準備小禮物、點心和飲料。</p></div>
       <div id="honghuiCards" class="items-grid"></div>
     </section>
@@ -147,19 +145,30 @@
   <nav class="mobile-nav" aria-label="手機快速導覽"><a href="#timeline">四週行程</a><a href="#workstreams">工作進度</a><a href="#attendees">新人回報</a><a href="#activity">提交紀錄</a></nav>
   <footer class="footer"><div class="container footer-inner"><div class="footer-name">THE WAY <span>2026 CHRISTMAS</span></div><div>CHANGE LIFE CHURCH · CLC PROJECT CENTER</div><a href="#overview">回到最上方 ↑</a></div></footer>
   <dialog id="mealDialog" class="submission-dialog meal-submission-dialog" aria-labelledby="mealDialogTitle">
-    <div class="submission-dialog-head"><div><span class="kicker">CHRISTMAS HOSPITALITY</span><h2 id="mealDialogTitle">新增分堂餐點提案</h2><p>免登入填寫 · 送出後直接顯示在首頁</p></div><button id="mealDialogClose" class="submission-dialog-close" type="button" aria-label="關閉餐點填寫視窗">×</button></div>
+    <div class="submission-dialog-head"><div><span class="kicker">CHRISTMAS HOSPITALITY</span><h2 id="mealDialogTitle">分堂餐點提案</h2><p id="mealDialogSubtitle">首次提交直接顯示；之後的修改須管理者審核</p></div><button id="mealDialogClose" class="submission-dialog-close" type="button" aria-label="關閉餐點填寫視窗">×</button></div>
     <div class="submission-dialog-body">
-<form id="publicMealForm" class="meal-public-form" novalidate>
-          <div class="meal-form-top"><div><h4>新增餐點提案</h4><p>選好分堂與聚會場次，接著可一次填寫多筆餐點。</p></div><span class="meal-nologin">免登入 · 送出立即公布</span></div>
-          <div class="meal-selectors">
-            <label>分堂<select id="publicMealBranch" required><option value="">請選擇分堂</option><option value="江翠">江翠</option><option value="新莊">新莊</option><option value="林口">林口</option></select></label>
-            <label>聚會類別<select id="publicMealService" required disabled><option value="">請先選擇分堂</option></select></label>
+      <form id="publicMealForm" class="meal-public-form" novalidate>
+        <div class="meal-selected-service"><strong id="mealSelectedService">江翠／主日</strong><span id="mealSubmissionMode">首次填寫</span></div>
+        <div class="meal-entry-fields">
+          <div class="meal-picture">
+            <div id="mealUploadZone" class="meal-upload-zone" role="button" tabindex="0" aria-label="點選或拖曳加入餐點照片"><input id="mealPhotoInput" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden><span class="meal-picture-placeholder">＋ 點選或拖曳照片</span><small id="mealPhotoHint" class="meal-photo-hint">一次可選多張，最多 20 張</small></div>
+            <div id="mealPhotoPreviews" class="meal-photo-preview-grid" aria-label="餐點照片預覽"></div>
           </div>
-          <div id="publicMealRows" class="meal-entry-list"></div>
-          <div class="meal-form-actions"><button type="button" id="addPublicMeal" class="secondary-btn">＋ 新增一筆餐點</button><button type="submit" id="submitPublicMeals" class="primary-btn">送出餐點</button></div>
-          <p class="meal-form-message" id="publicMealMessage" role="status">可一次選擇多張照片或直接拖曳進欄位；首頁點擊封面即可瀏覽相簿。送出後直接公開，只有管理者可刪除。</p>
-        </form>
+          <div class="meal-entry-inputs">
+            <label>餐點名稱<input id="mealName" maxlength="80" required placeholder="例如：聖誕分享拼盤"></label>
+            <div class="meal-prices"><label>每套單價 NT$<input id="mealUnit" type="number" min="0" max="100000" step="1" inputmode="numeric" required placeholder="例如 120"></label><label>總預算 NT$<input id="mealBudget" type="number" min="0" max="5000000" step="1" inputmode="numeric" required placeholder="例如 8000"></label></div>
+            <label>備註（選填）<textarea id="mealNote" rows="2" maxlength="500" placeholder="其他說明可留白"></textarea></label>
+            <label id="mealReporterWrap" hidden>修改填報人（選填）<input id="mealReporter" maxlength="50" placeholder="姓名"></label>
+          </div>
+        </div>
+        <div class="meal-form-actions"><button type="submit" id="submitPublicMeals" class="primary-btn">送出餐點</button></div>
+        <p class="meal-form-message" id="publicMealMessage" role="status">選擇照片後即可送出。</p>
+      </form>
     </div>
+  </dialog>
+  <dialog id="mealReviewDialog" class="submission-dialog meal-review-dialog" aria-labelledby="mealReviewTitle">
+    <div class="submission-dialog-head"><div><span class="kicker">SUPERUSER REVIEW</span><h2 id="mealReviewTitle">待審核的餐點修改</h2><p>登入管理者可直接在這裡核准或退回，不另開後台。</p></div><button id="mealReviewClose" class="submission-dialog-close" type="button" aria-label="關閉審核視窗">×</button></div>
+    <div id="mealReviewList" class="submission-dialog-body meal-review-list"></div>
   </dialog>
   <dialog id="countDialog" class="submission-dialog count-submission-dialog" aria-labelledby="countDialogTitle">
     <div class="submission-dialog-head"><div><span class="kicker">NEW FRIENDS</span><h2 id="countDialogTitle">回報新人人數</h2><p>免登入填寫 · 送出後即時計入首頁總數</p></div><button id="countDialogClose" class="submission-dialog-close" type="button" aria-label="關閉新人回報視窗">×</button></div>
@@ -209,7 +218,7 @@
   <dialog id="installHelpDialog" class="install-help-dialog" aria-labelledby="installHelpTitle"><div class="install-help-header"><h2 id="installHelpTitle">建立桌面捷徑</h2><button id="installHelpClose" type="button" aria-label="關閉說明">×</button></div><p id="installHelpText"></p><button type="button" id="installHelpDone" class="primary-btn">知道了</button></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script type="module" src="app.js?v=20261111-modals"></script>
-  <script type="module" src="meal-public.js?v=20261111-mealgallery"></script>
+  <script type="module" src="meal-public.js?v=20261111-category-review-v1"></script>
   <script defer src="modal-ui.js?v=20261111"></script>
   <script defer src="pwa.js?v=20261111-shortcut-v2"></script>
 </body>

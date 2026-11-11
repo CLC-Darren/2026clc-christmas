@@ -1,234 +1,215 @@
-// 餐點提案：無須登入即可新增；第一張為封面，其餘圖片放在各餐點的 photos 子集合。
-// 既有只有 imageData 的餐點仍能正常顯示。
+// 2026 CLC Christmas — 分堂餐點：六張分類卡片／七個場次；首次公開，後續修改先審核。
 import {firebaseConfig,superusers} from './firebase-config.js';
 import {getApps,initializeApp} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js';
-import {getFirestore,collection,doc,writeBatch,serverTimestamp,onSnapshot,getDocsFromServer} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js';
-
+import {getFirestore,collection,doc,onSnapshot,getDocs,getDocsFromServer,setDoc,addDoc,writeBatch,serverTimestamp,deleteDoc} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js';
 const $=id=>document.getElementById(id);
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const BRANCH_SERVICES={'江翠':['晚崇','青崇','主日'],'新莊':['青崇','主日'],'林口':['青崇','主日']};
-const key='clc_christmas_public_meals_draft_v1';
-const MAX_PHOTOS=20;
-const form=$('publicMealForm'),rows=$('publicMealRows');
-const photosForRow=new WeakMap();
-const processingRows=new WeakSet();
-let db=null,admin=false,meals=[],sending=false;
-const money=v=>'NT$ '+Number(v).toLocaleString('zh-TW');
-function message(s,error=false){const el=$('publicMealMessage');el.textContent=s;el.classList.toggle('error',error)}
-function refreshService(){const branch=$('publicMealBranch').value,sel=$('publicMealService'),prior=sel.value;sel.innerHTML='<option value="">請選擇聚會類別</option>'+(BRANCH_SERVICES[branch]||[]).map(s=>`<option value="${s}">${s}</option>`).join('');sel.disabled=!branch;if((BRANCH_SERVICES[branch]||[]).includes(prior))sel.value=prior}
-function showPreviews(row){
-  const photos=photosForRow.get(row)||[],box=row.querySelector('.meal-photo-preview-grid');
-  row.querySelector('.meal-picture-placeholder').textContent=photos.length?`已選 ${photos.length} 張照片 · 可繼續拖曳加入`:'＋ 選照片／拖曳放入';
-  row.querySelector('.meal-photo-hint').textContent=`${photos.length} / ${MAX_PHOTOS} 張 · 可一次選擇多張`;
-  box.innerHTML=photos.map((src,i)=>`<div class="meal-upload-thumb"><img src="${esc(src)}" alt="餐點照片 ${i+1}"><button type="button" class="meal-upload-remove" data-remove-photo="${i}" aria-label="移除第 ${i+1} 張照片">×</button>${i===0?'<span class="meal-cover-label">封面</span>':''}</div>`).join('');
-  box.querySelectorAll('[data-remove-photo]').forEach(btn=>btn.addEventListener('click',()=>{
-    photos.splice(Number(btn.dataset.removePhoto),1);showPreviews(row);saveLocal();
-  }));
+const escapeHTML=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const slotMeta={
+ 'jiangcui-sunday':['江翠','主日'],'jiangcui-youth':['江翠','青崇'],'jiangcui-evening':['江翠','晚崇'],
+ 'xinzhuang-sunday':['新莊','主日'],'xinzhuang-youth':['新莊','青崇'],
+ 'linkou-sunday':['林口','主日'],'linkou-youth':['林口','青崇']
+};
+const groups=[
+ {id:'jc-sun',name:'江翠主日',slots:['jiangcui-sunday']},
+ {id:'jc-youth',name:'江翠青、晚崇',slots:['jiangcui-youth','jiangcui-evening']},
+ {id:'xz-sun',name:'新莊主日',slots:['xinzhuang-sunday']},
+ {id:'xz-youth',name:'新莊青崇',slots:['xinzhuang-youth']},
+ {id:'lk-sun',name:'林口主日',slots:['linkou-sunday']},
+ {id:'lk-youth',name:'林口青崇',slots:['linkou-youth']}
+];
+const MAX_PHOTOS=20, MAX_TOTAL_CHARS=760000;
+const isPhoto=x=>typeof x==='string'&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(x)&&x.length<=140000;
+const money=n=>'NT$ '+Number(n||0).toLocaleString('zh-TW');
+const state={db:null,admin:false,user:null,slots:new Map(),legacy:new Map(),legacyAll:new Map(),legacyImages:new Map(),requests:new Map(),activeTabs:new Map(),positions:new Map(),pendingUnsub:null,currentSlot:null,editing:false,images:[],processing:false,selectedGallery:[],galleryIndex:0,gallerySlot:null,busy:false,reviewSlot:null};
+const form=$('publicMealForm'),dialog=$('mealDialog'),gallery=$('mealGalleryDialog'),reviewDialog=$('mealReviewDialog');
+const imgCol=id=>collection(state.db,'christmas2026','main','publicMeals',id,'photos');
+const slotRef=id=>doc(state.db,'christmas2026','main','mealSlots',id);
+const requestRef=id=>doc(state.db,'christmas2026','main','mealChangeRequests',id);
+function shortStatus(s,error=false){const el=$('publicMealMessage');el.textContent=s;el.classList.toggle('error',error)}
+function getSlotId(branch,service){return Object.keys(slotMeta).find(id=>slotMeta[id][0]===branch&&slotMeta[id][1]===service)||null}
+function groupSlot(group){return state.activeTabs.get(group.id)||group.slots[0]}
+function newest(items){return items.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))[0]||null}
+function effective(slot){return state.slots.get(slot)||state.legacy.get(slot)||null}
+function imagesFor(item){if(!item)return [];if(Array.isArray(item.images)&&item.images.length)return item.images.filter(isPhoto).slice(0,MAX_PHOTOS);
+ const imgs=[item.imageData,...(state.legacyImages.get(item.id)||[])];return imgs.filter(isPhoto).slice(0,MAX_PHOTOS)}
+function pendingFor(slot){return [...state.requests.values()].filter(r=>r.status==='pending'&&r.slotId===slot).sort((a,b)=>(a.submittedAt?.seconds||0)-(b.submittedAt?.seconds||0))}
+function maybeLoadLegacy(item){if(!state.db||!item?.legacy||state.legacyImages.has(item.id))return;
+ state.legacyImages.set(item.id,[]);
+ getDocs(imgCol(item.id)).then(snap=>{state.legacyImages.set(item.id,snap.docs.map(x=>x.data()).filter(d=>isPhoto(d.imageData)).sort((a,b)=>a.position-b.position).map(d=>d.imageData));renderCards()}).catch(e=>console.warn('legacy meal photos',e));
 }
-async function addFiles(row,files){
-  if(processingRows.has(row))return;
-  const photos=photosForRow.get(row)||[];
-  const chosen=[...files].filter(f=>f && (f.type||'').startsWith('image/'));
-  if(chosen.length===0){message('請選擇 JPG、PNG 或 WebP 照片。',true);return}
-  if(chosen.length>MAX_PHOTOS-photos.length){message(`每筆餐點最多 ${MAX_PHOTOS} 張；目前已選 ${photos.length} 張，請減少選擇。`,true);return}
-  processingRows.add(row);
-  try{
-    for(let i=0;i<chosen.length;i++){
-      message(`正在壓縮並加入照片 ${i+1} / ${chosen.length} …`);
-      const data=await makePhoto(chosen[i]);photos.push(data);
-      showPreviews(row);
-    }
-    message(`已加入 ${chosen.length} 張照片，送出後會顯示疊放式相簿。`);saveLocal();
-  }catch(e){message(`照片處理失敗：${e.message}`,true);saveLocal()}
-  finally{processingRows.delete(row)}
+function coverView(group,slot,item){const images=imagesFor(item),pos=state.positions.get(slot)||0,idx=pos%Math.max(images.length,1);
+ if(!images.length)return `<button type="button" class="meal-card-empty" data-edit-slot="${slot}"><span>＋</span><strong>尚未填寫餐點</strong><small>點擊開始填寫</small></button>`;
+ return `<div class="meal-card-photo-wrap ${images.length>1?'meal-photo-stack':''}">
+ <button class="meal-card-cover" type="button" data-open-gallery="${slot}" aria-label="打開${escapeHTML(group.name)}餐點相簿"><img src="${escapeHTML(images[idx])}" alt="${escapeHTML(item.mealName)} 第 ${idx+1} 張照片"><span class="meal-card-photo-counter">${idx+1} / ${images.length}</span><span class="meal-card-photo-open">點開查看全部照片 ↗</span></button>
+ ${images.length>1?`<button class="meal-card-arrow meal-card-arrow-prev" type="button" data-slide="${slot}" data-step="-1" aria-label="上一張">‹</button><button class="meal-card-arrow meal-card-arrow-next" type="button" data-slide="${slot}" data-step="1" aria-label="下一張">›</button>`:''}
+ </div>`;
 }
-function mealRow(preset={}){
-  const row=document.createElement('fieldset');row.className='meal-entry';
-  row.innerHTML=`<legend>餐點 <span class="meal-entry-number"></span></legend>
-    <button class="meal-remove" type="button" aria-label="移除此筆餐點">移除 ×</button>
-    <div class="meal-entry-fields">
-      <div class="meal-picture">
-        <div class="meal-upload-zone" role="button" tabindex="0" aria-label="點選或拖曳上傳多張餐點照片">
-          <input type="file" accept="image/jpeg,image/png,image/webp" class="meal-photo-file" multiple hidden>
-          <span class="meal-picture-placeholder">＋ 選照片／拖曳放入</span>
-          <small class="meal-photo-hint">0 / ${MAX_PHOTOS} 張 · 可一次選擇多張</small>
-        </div>
-        <div class="meal-photo-preview-grid" aria-label="已選照片預覽"></div>
-      </div>
-      <div class="meal-entry-inputs"><label>餐點名稱<input class="meal-name" maxlength="80" required placeholder="例如：聖誕分享拼盤" value="${esc(preset.mealName||'')}"></label>
-      <div class="meal-prices"><label>每套單價 NT$<input class="meal-unit" type="number" min="0" max="100000" step="1" inputmode="numeric" required placeholder="例如 120" value="${esc(preset.unitPrice??'')}"></label>
-      <label>總預算 NT$<input class="meal-total" type="number" min="0" max="5000000" step="1" inputmode="numeric" required placeholder="例如 8000" value="${esc(preset.totalBudget??'')}"></label></div>
-      <label>備註（選填）<textarea class="meal-note" rows="2" maxlength="500" placeholder="其他說明可留白">${esc(preset.note||'')}</textarea></label></div></div>`;
-  rows.appendChild(row);
-  const saved=Array.isArray(preset.images)?preset.images:(preset.imageData?[preset.imageData]:[]);
-  photosForRow.set(row,saved.filter(v=>typeof v==='string'&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(v)&&v.length<=135000).slice(0,MAX_PHOTOS));
-  showPreviews(row);
-  const zone=row.querySelector('.meal-upload-zone'),input=row.querySelector('.meal-photo-file');
-  zone.addEventListener('click',()=>input.click());
-  zone.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click()}});
-  input.addEventListener('change',async()=>{const chosen=[...input.files];input.value='';await addFiles(row,chosen)});
-  ['dragenter','dragover'].forEach(name=>zone.addEventListener(name,e=>{e.preventDefault();e.stopPropagation();zone.classList.add('drag-over')}));
-  ['dragleave','drop'].forEach(name=>zone.addEventListener(name,e=>{e.preventDefault();e.stopPropagation();zone.classList.remove('drag-over')}));
-  zone.addEventListener('drop',e=>addFiles(row,e.dataTransfer?.files||[]));
-  row.querySelector('.meal-remove').addEventListener('click',()=>{if(rows.children.length===1){message('至少需要一筆餐點。',true);return}row.remove();renumber();saveLocal()});
-  row.addEventListener('input',saveLocal);
-  renumber();return row;
+function groupHTML(g){const slot=groupSlot(g),item=effective(slot),tabs=g.slots.length>1?`<div class="meal-card-tabs">${g.slots.map(s=>`<button type="button" data-select-slot="${s}" data-group="${g.id}" class="${s===slot?'active':''}">${escapeHTML(slotMeta[s][1])}${state.admin&&pendingFor(s).length?'<i class="meal-tab-dot" aria-label="待審核"></i>':''}</button>`).join('')}</div>`:'';
+ const pend=pendingFor(slot),total=[...g.slots].reduce((n,k)=>n+pendingFor(k).length,0),reviewTarget=pend.length?slot:(g.slots.find(k=>pendingFor(k).length)||slot);
+ return `<article class="public-meal-card meal-category-card" data-category="${g.id}">
+ <div class="meal-card-head"><div><small>BRANCH HOSPITALITY</small><h3>${escapeHTML(g.name)}</h3></div><span class="meal-card-badge ${item?'ready':'empty'}">${item?'已填寫':'待填寫'}</span></div>
+ ${tabs}${coverView(g,slot,item)}
+ <div class="meal-card-details">${item?`<h4>${escapeHTML(item.mealName)}</h4><div class="meal-card-prices"><span>每套 ${money(item.unitPrice)}</span><strong>總預算 ${money(item.totalBudget)}</strong></div>${item.note?`<p>${escapeHTML(item.note)}</p>`:''}`:'<p class="meal-card-placeholder">請點擊「填寫餐點」上傳圖片與預算。</p>'}</div>
+ <div class="meal-card-footer"><button class="meal-card-edit" type="button" data-edit-slot="${slot}">${item?'編輯餐點':'＋ 填寫餐點'}</button>${state.admin&&total?`<button type="button" class="meal-card-review" data-review-slot="${reviewTarget}" aria-label="有 ${total} 筆待審核，點擊審核"><span class="meal-review-dot"></span> 待審核 ${total}</button>`:''}${state.admin&&item?`<button class="meal-card-delete" type="button" data-delete-slot="${slot}">刪除</button>`:''}${!state.admin&&item?'<span class="meal-card-note">後續修改需審核</span>':''}</div>
+ </article>`;
 }
-function renumber(){[...rows.children].forEach((r,i)=>{r.querySelector('.meal-entry-number').textContent=`${i+1}`;r.querySelector('.meal-remove').hidden=rows.children.length===1})}
-async function makePhoto(file){
-  if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('只支援 JPG、PNG 或 WebP');
-  if(file.size>12*1024*1024)throw Error('單張原始照片最多 12 MB');
-  const url=URL.createObjectURL(file);
-  try{
-    const im=await new Promise((ok,fail)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>fail(Error('無法讀取圖片'));i.src=url});
-    let side=900,quality=.78;
-    for(let n=0;n<12;n++){
-      const scale=Math.min(1,side/Math.max(im.naturalWidth,im.naturalHeight));
-      const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(im.naturalWidth*scale));canvas.height=Math.max(1,Math.round(im.naturalHeight*scale));
-      canvas.getContext('2d').drawImage(im,0,0,canvas.width,canvas.height);
-      const data=canvas.toDataURL('image/jpeg',quality);
-      if(data.length<=135000)return data;
-      quality=Math.max(.36,quality-.06);side=Math.round(side*.82);
-    }
-    throw Error('照片壓縮失敗，請換較小圖片');
-  }finally{URL.revokeObjectURL(url)}
+let suppressGalleryClickUntil=0;
+function slide(slot,step){const images=imagesFor(effective(slot));if(images.length<2)return;state.positions.set(slot,((state.positions.get(slot)||0)+step+images.length)%images.length);renderCards()}
+function renderCards(){const root=$('featuredMeals');if(!root)return;root.innerHTML=groups.map(groupHTML).join('');
+ $('publicMealCount').textContent=Object.keys(slotMeta).filter(s=>!!effective(s)).length;
+ root.querySelectorAll('[data-select-slot]').forEach(b=>b.addEventListener('click',()=>{state.activeTabs.set(b.dataset.group,b.dataset.selectSlot);renderCards()}));
+ root.querySelectorAll('[data-edit-slot]').forEach(b=>b.addEventListener('click',()=>openEditor(b.dataset.editSlot)));
+ root.querySelectorAll('[data-slide]').forEach(b=>b.addEventListener('click',()=>slide(b.dataset.slide,Number(b.dataset.step))));
+ root.querySelectorAll('[data-open-gallery]').forEach(b=>{
+  let start=null;
+  b.addEventListener('touchstart',e=>{start=e.changedTouches[0]?.clientX??null},{passive:true});
+  b.addEventListener('touchend',e=>{if(start==null)return;const dx=e.changedTouches[0].clientX-start;start=null;if(Math.abs(dx)>45){suppressGalleryClickUntil=Date.now()+350;slide(b.dataset.openGallery,dx<0?1:-1)}},{passive:true});
+  b.addEventListener('click',()=>{if(Date.now()<suppressGalleryClickUntil)return;openGallery(b.dataset.openGallery)});
+ });
+ root.querySelectorAll('[data-review-slot]').forEach(b=>b.addEventListener('click',()=>openReview(b.dataset.reviewSlot)));
+ root.querySelectorAll('[data-delete-slot]').forEach(b=>b.addEventListener('click',()=>deleteEntry(b.dataset.deleteSlot)));
 }
-function saveLocal(){
-  const draft={branch:$('publicMealBranch').value,service:$('publicMealService').value,
-    rows:[...rows.children].map(r=>({mealName:r.querySelector('.meal-name').value,unitPrice:r.querySelector('.meal-unit').value,totalBudget:r.querySelector('.meal-total').value,note:r.querySelector('.meal-note').value,images:photosForRow.get(r)||[]}))};
-  try{localStorage.setItem(key,JSON.stringify(draft))}catch{
-    // 瀏覽器 localStorage 容量有限；僅保留文字，照片仍保留在當前頁面直到送出。
-    try{localStorage.setItem(key,JSON.stringify({...draft,rows:draft.rows.map(r=>({...r,images:[]}))}))}catch{}
+async function resizeImage(source,maxChars){let image;
+ if(source instanceof File){if(!['image/jpeg','image/png','image/webp'].includes(source.type))throw Error('請選 JPG、PNG 或 WebP 圖片');if(source.size>12*1024*1024)throw Error('單張原始照片不可超過 12 MB')}
+ const url=source instanceof File?URL.createObjectURL(source):source;
+ try{image=await new Promise((ok,bad)=>{const img=new Image();img.onload=()=>ok(img);img.onerror=()=>bad(Error('照片讀取失敗'));img.src=url});
+ let side=920,quality=.78;
+ for(let i=0;i<20;i++){
+  const scale=Math.min(1,side/Math.max(image.naturalWidth,image.naturalHeight)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
+  const result=canvas.toDataURL('image/jpeg',quality);if(result.length<=maxChars)return result;quality=Math.max(.23,quality-.055);side=Math.max(240,Math.round(side*.86));
+ }
+ throw Error('照片太複雜，壓縮失敗');
+ }finally{if(source instanceof File)URL.revokeObjectURL(url)}
+}
+async function prepareImageList(){const target=Math.min(95000,Math.floor(MAX_TOTAL_CHARS/Math.max(1,state.images.length)));
+ let result=[];for(let i=0;i<state.images.length;i++){const photo=state.images[i];result.push(photo.length<=target?photo:await resizeImage(photo,target))}
+ if(result.reduce((n,x)=>n+x.length,0)>MAX_TOTAL_CHARS)throw Error('照片總量過大，請減少張數');return result;
+}
+function renderPreviews(){const box=$('mealPhotoPreviews');box.innerHTML=state.images.map((src,i)=>`<div class="meal-upload-thumb"><img src="${escapeHTML(src)}" alt="餐點照片第 ${i+1} 張"><button type="button" class="meal-upload-remove" data-remove-photo="${i}" aria-label="移除第 ${i+1} 張">×</button>${i===0?'<span class="meal-cover-label">封面</span>':''}</div>`).join('');
+ $('mealPhotoHint').textContent=`已選 ${state.images.length} / ${MAX_PHOTOS} 張 · 支援多選與拖曳`;
+ box.querySelectorAll('[data-remove-photo]').forEach(b=>b.addEventListener('click',()=>{state.images.splice(Number(b.dataset.removePhoto),1);renderPreviews();saveDraft()}));
+}
+async function addFiles(files){if(state.processing)return;const chosen=[...files].filter(f=>f instanceof File);
+ if(!chosen.length)return;if(state.images.length+chosen.length>MAX_PHOTOS){shortStatus(`最多 ${MAX_PHOTOS} 張照片，目前已選 ${state.images.length} 張。`,true);return}
+ state.processing=true;$('submitPublicMeals').disabled=true;
+ try{for(let i=0;i<chosen.length;i++){shortStatus(`正在加入照片 ${i+1} / ${chosen.length} …`);state.images.push(await resizeImage(chosen[i],95000));renderPreviews()}
+ shortStatus(`已加入 ${chosen.length} 張照片。`);saveDraft()}catch(e){shortStatus(e.message,true)}finally{state.processing=false;$('submitPublicMeals').disabled=false}
+}
+const draftKey=id=>'clc_meal_slot_draft_v1_'+id;
+function saveDraft(){if(!state.currentSlot||!dialog.open)return;const obj={mealName:$('mealName').value,unitPrice:$('mealUnit').value,totalBudget:$('mealBudget').value,note:$('mealNote').value,reporter:$('mealReporter').value};
+ try{localStorage.setItem(draftKey(state.currentSlot),JSON.stringify(obj))}catch{}}
+function readDraft(id){try{return JSON.parse(localStorage.getItem(draftKey(id))||'null')}catch{return null}}
+function clearDraft(id){try{localStorage.removeItem(draftKey(id))}catch{}}
+async function openEditor(slot){if(!slotMeta[slot])return;state.currentSlot=slot;const existing=effective(slot);state.editing=!!existing;
+ $('mealDialogTitle').textContent=`${slotMeta[slot].join('／')}｜${existing?'修改餐點':'首次填寫'}`;
+ $('mealSelectedService').textContent=slotMeta[slot].join('／');$('mealSubmissionMode').textContent=existing?'修改須審核':'首次填寫 · 立即公開';
+ $('mealDialogSubtitle').textContent=existing?'送出後不會直接覆蓋，需管理者確認才會更新首頁。':'第一次提交不需登入，送出後會直接公開。';
+ $('mealReporterWrap').hidden=!existing;$('submitPublicMeals').textContent=existing?'送出修改申請':'送出並公開';
+ form.reset();const d=readDraft(slot)||{};
+ $('mealName').value=d.mealName??existing?.mealName??'';$('mealUnit').value=d.unitPrice??existing?.unitPrice??'';
+ $('mealBudget').value=d.totalBudget??existing?.totalBudget??'';$('mealNote').value=d.note??existing?.note??'';$('mealReporter').value=d.reporter||'';
+ state.images=imagesFor(existing);if(existing?.legacy){maybeLoadLegacy(existing)}renderPreviews();shortStatus(existing?'請確認內容，送出後將進入待審核，不會立即更改公開資料。':'首次填寫送出後會直接公開。');
+ if(!dialog.open)dialog.showModal();
+ if(existing?.legacy&&Number(existing.photoCount||1)>1){try{const snap=await getDocs(imgCol(existing.id));if(state.currentSlot!==slot||!dialog.open)return;state.legacyImages.set(existing.id,snap.docs.map(d=>d.data()).filter(d=>isPhoto(d.imageData)).sort((a,b)=>a.position-b.position).map(d=>d.imageData));state.images=imagesFor(existing);renderPreviews()}catch(e){console.warn('existing meal images',e)}}
+}
+const dropZone=$('mealUploadZone'),photoInput=$('mealPhotoInput');
+dropZone.addEventListener('click',()=>photoInput.click());dropZone.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();photoInput.click()}});
+photoInput.addEventListener('change',async()=>{const files=[...photoInput.files];photoInput.value='';await addFiles(files)});
+['dragenter','dragover'].forEach(type=>dropZone.addEventListener(type,e=>{e.preventDefault();dropZone.classList.add('drag-over')}));
+['dragleave','drop'].forEach(type=>dropZone.addEventListener(type,e=>{e.preventDefault();dropZone.classList.remove('drag-over')}));
+dropZone.addEventListener('drop',e=>addFiles(e.dataTransfer?.files||[]));
+form.addEventListener('input',saveDraft);
+function readForm(){if(!state.currentSlot)throw Error('請先選擇分堂場次');const mealName=$('mealName').value.trim(),unitPrice=Number($('mealUnit').value),totalBudget=Number($('mealBudget').value),note=$('mealNote').value.trim();
+ if(!mealName)throw Error('請填寫餐點名稱');if($('mealUnit').value===''||$('mealBudget').value==='')throw Error('請填寫每套單價與總預算');
+ if(!Number.isInteger(unitPrice)||unitPrice<0||unitPrice>100000||!Number.isInteger(totalBudget)||totalBudget<0||totalBudget>5000000)throw Error('金額格式不正確');
+ if(!state.images.length)throw Error('請至少上傳一張餐點照片');return {mealName,unitPrice,totalBudget,note};
+}
+async function notifyRevision(id){try{const response=await fetch('/api/meal-review-notify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});if(!response.ok)return false;return !!(await response.json()).sent}catch(e){console.warn('mail notification not delivered',e);return false}}
+form.addEventListener('submit',async e=>{e.preventDefault();if(state.busy||state.processing||!state.db)return;let record;try{record=readForm()}catch(err){shortStatus(err.message,true);return}
+ const slot=state.currentSlot,existing=effective(slot);state.busy=true;$('submitPublicMeals').disabled=true;
+ try{shortStatus('正在壓縮照片並送出…');const images=await prepareImageList();const data={...record,imageData:images[0],images};
+ if(!existing){try{await setDoc(slotRef(slot),{...data,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});shortStatus('首次餐點已直接公開！');clearDraft(slot);dialog.close();renderCards()}
+  catch(e){if(e.code==='permission-denied'){shortStatus('這個場次剛剛已有其他人完成首次填寫，請關閉後重新開啟修改；資料未被覆蓋。',true)}else throw e} }
+ else{const proposal=await addDoc(collection(state.db,'christmas2026','main','mealChangeRequests'),{...data,slotId:slot,reporter:$('mealReporter').value.trim(),status:'pending',submittedAt:serverTimestamp()});clearDraft(slot);dialog.close();const sent=await notifyRevision(proposal.id);shortStatus(sent?'修改已提交待管理者審核，通知郵件已寄出。':'修改已提交待管理者審核；通知郵件尚未成功寄送，請告知管理者登入網站查看。',!sent);showToast(sent?'修改申請已提交，已通知管理者。':'修改申請已保存，請提醒管理者查看紅點。')}
+ }catch(err){console.error('meal save error',err);shortStatus('送出失敗：'+(err.code||err.message||'請稍後再試'),true)}finally{state.busy=false;$('submitPublicMeals').disabled=false}
+});
+$('mealDialogClose').addEventListener('click',()=>dialog.close());
+function showToast(msg){const t=$('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),5200)}
+async function openGallery(slot){const item=effective(slot);if(!item)return;state.gallerySlot=slot;state.selectedGallery=imagesFor(item);state.galleryIndex=state.positions.get(slot)||0;
+ $('mealGalleryTitle').textContent=slotMeta[slot].join('／')+' · '+item.mealName;
+ drawGallery();if(!gallery.open)gallery.showModal();
+ if(item.legacy&&Number(item.photoCount||1)>1&&state.selectedGallery.length<Number(item.photoCount||1)){
+  try{const snap=await getDocs(imgCol(item.id));if(state.gallerySlot!==slot||!gallery.open)return;
+   state.legacyImages.set(item.id,snap.docs.map(d=>d.data()).filter(d=>isPhoto(d.imageData)).sort((a,b)=>a.position-b.position).map(d=>d.imageData));
+   state.selectedGallery=imagesFor(item);drawGallery();renderCards();
+  }catch(e){console.warn('legacy photos not loaded',e)}
+ }
+}
+function drawGallery(){const imgs=state.selectedGallery;if(!imgs.length)return;state.galleryIndex=state.galleryIndex%imgs.length;
+ $('mealGalleryImage').src=imgs[state.galleryIndex];$('mealGalleryPosition').textContent=`${state.galleryIndex+1} / ${imgs.length}`;
+ $('mealGalleryLoading').textContent=imgs.length>1?'可左右滑動，或點選下方縮圖':'';
+ $('mealGalleryPrev').hidden=imgs.length<=1;$('mealGalleryNext').hidden=imgs.length<=1;
+ $('mealGalleryThumbs').innerHTML=imgs.map((src,i)=>`<button class="gallery-thumb ${state.galleryIndex===i?'active':''}" type="button" data-gallery-index="${i}" aria-label="第 ${i+1} 張"><img src="${escapeHTML(src)}" alt="第 ${i+1} 張"></button>`).join('');
+ $('mealGalleryThumbs').querySelectorAll('[data-gallery-index]').forEach(b=>b.addEventListener('click',()=>{state.galleryIndex=Number(b.dataset.galleryIndex);drawGallery()}));
+}
+function moveGallery(n){if(state.selectedGallery.length<2)return;state.galleryIndex=(state.galleryIndex+n+state.selectedGallery.length)%state.selectedGallery.length;drawGallery()}
+$('mealGalleryPrev').addEventListener('click',()=>moveGallery(-1));$('mealGalleryNext').addEventListener('click',()=>moveGallery(1));$('mealGalleryClose').addEventListener('click',()=>gallery.close());
+document.addEventListener('keydown',e=>{if(!gallery.open)return;if(e.key==='ArrowLeft')moveGallery(-1);if(e.key==='ArrowRight')moveGallery(1)});
+let touchX=null;$('mealGalleryImage').addEventListener('touchstart',e=>{touchX=e.changedTouches[0]?.clientX??null},{passive:true});$('mealGalleryImage').addEventListener('touchend',e=>{if(touchX==null)return;const d=e.changedTouches[0].clientX-touchX;touchX=null;if(Math.abs(d)>45)moveGallery(d<0?1:-1)},{passive:true});
+async function deleteEntry(slot){
+ if(!state.admin||!state.db||state.busy)return;
+ if(!confirm(`確定刪除「${slotMeta[slot].join('／')}」的正式餐點與舊版紀錄？此動作無法復原。`))return;
+ state.busy=true;
+ try{
+  const batch=writeBatch(state.db);if(state.slots.has(slot))batch.delete(slotRef(slot));
+  // 清除相同場次的舊版資料，避免刪掉新版後又顯示歷史重複餐點。
+  for(const item of (state.legacyAll.get(slot)||[])){
+   const ref=doc(state.db,'christmas2026','main','publicMeals',item.id);
+   const photos=await getDocs(imgCol(item.id));photos.docs.forEach(d=>batch.delete(d.ref));batch.delete(ref);
   }
+  await batch.commit();showToast('管理者已刪除這個場次的正式資料。');
+ }catch(e){console.error('delete meal',e);showToast('刪除失敗：'+(e.message||e.code||'未知錯誤'))}
+ finally{state.busy=false}
 }
-function loadLocal(){try{const raw=JSON.parse(localStorage.getItem(key)||'null');if(raw){$('publicMealBranch').value=raw.branch||'';refreshService();$('publicMealService').value=raw.service||'';if(Array.isArray(raw.rows)&&raw.rows.length){raw.rows.slice(0,10).forEach(r=>mealRow(r));return}}}catch{}mealRow()}
-function getEntries(){
-  const branch=$('publicMealBranch').value,service=$('publicMealService').value;
-  if(!BRANCH_SERVICES[branch]?.includes(service))throw Error('請先選擇正確的分堂與聚會類別');
-  return [...rows.children].map((row,i)=>{
-    if(processingRows.has(row))throw Error(`餐點 ${i+1}：照片還在處理中`);
-    const name=row.querySelector('.meal-name').value.trim(),unitText=row.querySelector('.meal-unit').value,budgetText=row.querySelector('.meal-total').value,note=row.querySelector('.meal-note').value.trim(),images=photosForRow.get(row)||[];
-    if(images.length<1)throw Error(`餐點 ${i+1}：請至少上傳一張照片`);
-    if(!name)throw Error(`餐點 ${i+1}：請填餐點名稱`);
-    if(unitText===''||budgetText==='')throw Error(`餐點 ${i+1}：請填每套單價與總預算`);
-    const unitPrice=Number(unitText),totalBudget=Number(budgetText);
-    if(!Number.isInteger(unitPrice)||unitPrice<0||unitPrice>100000||!Number.isInteger(totalBudget)||totalBudget<0||totalBudget>5000000)throw Error(`餐點 ${i+1}：金額必須是有效整數`);
-    return {row,images,record:{branch,service,mealName:name,unitPrice,totalBudget,note,imageData:images[0],photoCount:images.length,createdAt:serverTimestamp()}};
-  });
+// 原卡片右下角紅點審核；只在 Superuser 登入時顯示。
+function reviewItemsFor(slot){return state.reviewSlot==='ALL'?[...state.requests.values()].filter(r=>r.status==='pending'):[...state.requests.values()].filter(r=>r.slotId===slot&&r.status==='pending')}
+function openReview(slot){if(!state.admin)return;state.reviewSlot=slot;
+ $('mealReviewTitle').textContent=slot==='ALL'?'待審核的餐點修改':slotMeta[slot].join('／')+'｜待審核';drawReview();if(!reviewDialog.open)reviewDialog.showModal();}
+function drawReview(){const list=reviewItemsFor(state.reviewSlot).sort((a,b)=>(a.submittedAt?.seconds||0)-(b.submittedAt?.seconds||0));
+ const root=$('mealReviewList');if(!list.length){root.innerHTML='<p class="meal-review-empty">目前沒有待審核的修改。</p>';return}
+ root.innerHTML=list.map(p=>{const old=effective(p.slotId);const changed=[['餐點名稱',old?.mealName,p.mealName],['每套單價',old?.unitPrice,p.unitPrice],['總預算',old?.totalBudget,p.totalBudget],['備註',old?.note,p.note],['照片張數',imagesFor(old).length,p.images?.length||0]];
+ const diff=changed.filter(([k,a,b])=>String(a??'')!==String(b??'')).map(([k,a,b])=>`<div class="meal-review-diff"><b>${k}</b><span>${escapeHTML(a??'未填')}</span><strong>→ ${escapeHTML(b??'無')}</strong></div>`).join('')||'<p>資料內容未改動，請確認照片是否有變更。</p>';
+ return `<article class="meal-review-record" data-review-id="${escapeHTML(p.id)}"><header><strong>${escapeHTML(slotMeta[p.slotId]?.join('／')||p.slotId)}</strong><small>填報人：${escapeHTML(p.reporter||'未署名')}</small></header>${p.images?.length?`<img class="meal-review-cover" src="${escapeHTML(p.images[0])}" alt="修改提案的餐點照片">`:''}<div>${diff}</div><div class="meal-review-actions"><button type="button" class="primary-btn" data-approve="${escapeHTML(p.id)}">核准並公開</button><button type="button" class="secondary-btn" data-reject="${escapeHTML(p.id)}">退回</button></div></article>`}).join('');
+ root.querySelectorAll('[data-approve]').forEach(b=>b.addEventListener('click',()=>decide(b.dataset.approve,true)));
+ root.querySelectorAll('[data-reject]').forEach(b=>b.addEventListener('click',()=>decide(b.dataset.reject,false)));
 }
-function applyMealSnapshot(snapshot){meals=snapshot.docs.map(d=>({...d.data(),id:d.id}));render()}
-async function send(e){
-  e.preventDefault();if(sending)return;
-  if(!db){message('尚未連接 Firebase。',true);return}
-  let entries;try{entries=getEntries()}catch(err){message(err.message,true);return}
-  const submit=$('submitPublicMeals');sending=true;submit.disabled=true;submit.textContent='正在送出…';
-  const savedIds=[];
-  try{
-    const col=collection(db,'christmas2026','main','publicMeals');
-    // 一筆餐點一個原子批次：與 Firestore Rules 的安全讀取上限相容。
-    for(let i=0;i<entries.length;i++){
-      const {row,images,record}=entries[i],ref=doc(col),batch=writeBatch(db);
-      batch.set(ref,record);
-      images.slice(1).forEach((imageData,index)=>batch.set(doc(collection(ref,'photos')),{imageData,position:index+1,createdAt:serverTimestamp()}));
-      message(`正在儲存餐點 ${i+1}/${entries.length}（${images.length} 張照片）…`);
-      await batch.commit();
-      savedIds.push(ref.id);
-      row.remove();
-      if(rows.children.length===0)mealRow();else renumber();
-      saveLocal();
-    }
-    try{
-      const snapshot=await getDocsFromServer(col);applyMealSnapshot(snapshot);
-      const visible=savedIds.every(id=>snapshot.docs.some(d=>d.id===id));
-      message(visible?`已公開 ${savedIds.length} 筆餐點，首頁可點開多張照片。`:'資料已儲存，但首頁讀取尚未同步；請勿重複送出。',!visible);
-    }catch(readError){console.warn('meal readback',readError);message('餐點已儲存，但重新讀取暫時失敗；請勿重複送出。',true)}
-    document.getElementById('mealDialog')?.close();
-    window.dispatchEvent(new CustomEvent('clc:meal-saved',{detail:{count:savedIds.length,verified:true}}));
-    $('meals-showcase').scrollIntoView({behavior:'smooth',block:'start'});
-  }catch(err){
-    console.error('publicMeals write',err);
-    message(`${savedIds.length?`已儲存 ${savedIds.length} 筆；剩餘餐點尚未送出。`:'送出失敗。'} ${err.code==='permission-denied'?'請確認 Firebase Firestore Database → Rules 已 Publish 最新規則。':err.message||'請稍後重試'}`,true);
-  }finally{sending=false;submit.disabled=false;submit.textContent='送出餐點'}
+async function decide(id,approve){if(!state.admin||!state.db||state.busy)return;const p=state.requests.get(id);if(!p||p.status!=='pending')return;
+ if(!confirm(approve?'確定核准這份修改，直接更新首頁？':'確定退回這份修改？'))return;
+ state.busy=true;
+ try{const batch=writeBatch(state.db);if(approve){const existing=state.slots.get(p.slotId);const docData={mealName:p.mealName,unitPrice:p.unitPrice,totalBudget:p.totalBudget,note:p.note,imageData:p.imageData,images:p.images,createdAt:existing?.createdAt||serverTimestamp(),updatedAt:serverTimestamp(),lastApprovedBy:state.user.email};batch.set(slotRef(p.slotId),docData)}
+ batch.update(requestRef(id),{status:approve?'approved':'rejected',reviewedAt:serverTimestamp(),reviewedBy:state.user.email});await batch.commit();showToast(approve?'已核准，首頁資料正在更新。':'已退回修改申請。')}
+ catch(e){console.error('meal review',e);showToast('操作失敗：'+(e.message||e.code||'未知錯誤'))}
+ finally{state.busy=false}
 }
-const gallery={mealId:null,images:[],index:0};
-const galleryDialog=$('mealGalleryDialog');
-function galleryRender(){
-  const item=gallery.images[gallery.index];if(!item)return;
-  $('mealGalleryImage').src=item;
-  $('mealGalleryImage').alt=`餐點照片第 ${gallery.index+1} 張`;
-  $('mealGalleryPosition').textContent=`${gallery.index+1} / ${gallery.images.length}`;
-  const many=gallery.images.length>1;
-  $('mealGalleryPrev').hidden=!many;$('mealGalleryNext').hidden=!many;
-  const box=$('mealGalleryThumbs');
-  box.innerHTML=gallery.images.map((src,i)=>`<button type="button" class="gallery-thumb ${i===gallery.index?'active':''}" data-meal-gallery-index="${i}" aria-label="查看第 ${i+1} 張照片" aria-pressed="${i===gallery.index}"><img src="${esc(src)}" alt="第 ${i+1} 張縮圖"></button>`).join('');
-  box.querySelectorAll('[data-meal-gallery-index]').forEach(btn=>btn.addEventListener('click',()=>{gallery.index=Number(btn.dataset.mealGalleryIndex);galleryRender()}));
-  box.querySelector('.gallery-thumb.active')?.scrollIntoView({block:'nearest',inline:'nearest'});
-}
-function galleryMove(delta){const size=gallery.images.length;if(size<2)return;gallery.index=(gallery.index+delta+size)%size;galleryRender()}
-async function galleryOpen(id){
-  if(!db)return;
-  const item=meals.find(m=>m.id===id);if(!item)return;
-  gallery.mealId=id;gallery.images=[item.imageData];gallery.index=0;
-  $('mealGalleryTitle').textContent=item.mealName;
-  $('mealGalleryLoading').textContent=Number(item.photoCount||1)>1?'正在載入其他照片…':'';
-  galleryRender();if(!galleryDialog.open)galleryDialog.showModal();
-  if(Number(item.photoCount||1)<=1)return;
-  try{
-    const snapshot=await getDocsFromServer(collection(db,'christmas2026','main','publicMeals',id,'photos'));
-    if(gallery.mealId!==id||!galleryDialog.open)return;
-    const images=snapshot.docs.map(d=>d.data()).filter(x=>x.imageData&&Number.isInteger(x.position)).sort((a,b)=>a.position-b.position).map(x=>x.imageData);
-    gallery.images=[item.imageData,...images];gallery.index=0;galleryRender();
-    $('mealGalleryLoading').textContent=gallery.images.length<Number(item.photoCount||1)?'部分照片尚未載入，請稍後重新開啟。':'';
-  }catch(e){console.error('meal gallery read',e);$('mealGalleryLoading').textContent='其他照片暫時無法讀取，請檢查 Firestore Rules。'}
-}
-$('mealGalleryPrev').addEventListener('click',()=>galleryMove(-1));
-$('mealGalleryNext').addEventListener('click',()=>galleryMove(1));
-$('mealGalleryClose').addEventListener('click',()=>galleryDialog.close());
-galleryDialog.addEventListener('close',()=>{gallery.mealId=null});
-galleryDialog.addEventListener('click',e=>{if(e.target===galleryDialog)galleryDialog.close()});
-document.addEventListener('keydown',e=>{if(!galleryDialog.open)return;if(e.key==='ArrowLeft'){e.preventDefault();galleryMove(-1)}else if(e.key==='ArrowRight'){e.preventDefault();galleryMove(1)}});
-let startX=null;
-$('mealGalleryImage').addEventListener('touchstart',e=>{startX=e.changedTouches[0]?.screenX??null},{passive:true});
-$('mealGalleryImage').addEventListener('touchend',e=>{if(startX===null)return;const dx=e.changedTouches[0].screenX-startX;if(Math.abs(dx)>45)galleryMove(dx<0?1:-1);startX=null},{passive:true});
-function cardHTML(item,withAdmin){
-  const count=Math.max(1,Number(item.photoCount)||1);
-  return `<article class="public-meal-card">
-    <button class="public-meal-image meal-photo-cover ${count>1?'meal-stack':''}" type="button" data-meal-gallery="${esc(item.id)}" aria-label="查看「${esc(item.mealName)}」的 ${count} 張餐點照片">
-      <img src="${esc(item.imageData)}" alt="${esc(item.mealName)} 餐點照片" loading="lazy">
-      ${count>1?`<span class="meal-photo-count">▣ ${count} 張照片</span>`:''}
-      <span class="meal-cover-open">${count>1?'點擊看相簿 · 左右滑動':'點擊放大照片'}</span>
-    </button>
-    <div class="public-meal-content"><div class="public-meal-tags"><span>${esc(item.branch)}</span><span>${esc(item.service)}</span></div><h4>${esc(item.mealName)}</h4><div class="public-meal-price"><span>每套 ${money(item.unitPrice)}</span><b>總預算 ${money(item.totalBudget)}</b></div>${item.note?`<p>${esc(item.note)}</p>`:''}${withAdmin?`<button type="button" class="meal-admin-delete" data-meal-delete="${esc(item.id)}">刪除此筆</button>`:''}</div>
-  </article>`;
-}
-function render(){
-  const sorted=[...meals].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
-  const featured=$('featuredMeals');$('publicMealCount').textContent=sorted.length;
-  if(!sorted.length){featured.innerHTML='<p class="meal-empty">目前尚無餐點提案。歡迎各分堂先上傳第一筆！</p>';return}
-  featured.innerHTML=sorted.map(r=>cardHTML(r,admin)).join('');
-  featured.querySelectorAll('[data-meal-delete]').forEach(b=>b.addEventListener('click',()=>removeMeal(b.dataset.mealDelete)));
-  featured.querySelectorAll('[data-meal-gallery]').forEach(b=>b.addEventListener('click',()=>galleryOpen(b.dataset.mealGallery)));
-}
-async function removeMeal(id){
-  if(!admin)return;const item=meals.find(m=>m.id===id);
-  if(!item||!confirm(`管理者確定刪除「${item.mealName}」及其全部照片？刪除後無法復原。`))return;
-  try{
-    const ref=doc(db,'christmas2026','main','publicMeals',id);
-    const snap=await getDocsFromServer(collection(ref,'photos'));
-    const batch=writeBatch(db);
-    snap.docs.forEach(d=>batch.delete(d.ref));batch.delete(ref);
-    await batch.commit();message('已刪除餐點與所有附加照片。');
-  }catch(e){console.error('meal delete',e);message('刪除失敗：'+(e.message||'請稍後再試'),true)}
-}
-$('publicMealBranch').addEventListener('change',()=>{refreshService();saveLocal()});
-$('publicMealService').addEventListener('change',saveLocal);
-$('addPublicMeal').addEventListener('click',()=>{if(rows.children.length>=10){message('每次最多新增 10 筆餐點。',true);return}mealRow();saveLocal()});
-form.addEventListener('submit',send);
-loadLocal();
-const configured=!Object.values(firebaseConfig).some(v=>!v||String(v).includes('PASTE_'));
-if(configured){
-  const app=getApps()[0]||initializeApp(firebaseConfig);db=getFirestore(app);
-  onSnapshot(collection(db,'christmas2026','main','publicMeals'),applyMealSnapshot,err=>{console.error('publicMeals listener',err);$('featuredMeals').innerHTML='<p class="meal-empty">餐點清單讀取失敗（'+esc(err.code||err.message||'未知錯誤')+'）。請檢查 Firestore Rules。</p>'});
-  onAuthStateChanged(getAuth(app),user=>{admin=!!(user?.emailVerified&&superusers.includes((user.email||'').toLowerCase()));render()});
-}else{$('featuredMeals').innerHTML='<p class="meal-empty">Firebase 尚未設定，完成後將顯示已提交餐點。</p>';message('請先完成 Firebase 設定才可送出餐點。',true)}
+$('mealReviewClose').addEventListener('click',()=>reviewDialog.close());
+function autoOpenMailReview(){const id=new URLSearchParams(location.search).get('review');if(!id||!state.admin)return;const p=state.requests.get(id);if(!p)return;openReview(p.slotId);history.replaceState(null,'',location.pathname+location.hash)}
+const configured=!Object.values(firebaseConfig).some(x=>!x||String(x).includes('PASTE_'));
+if(configured){const app=getApps()[0]||initializeApp(firebaseConfig);state.db=getFirestore(app);
+ onSnapshot(collection(state.db,'christmas2026','main','mealSlots'),snap=>{state.slots=new Map(snap.docs.map(d=>[d.id,{...d.data(),id:d.id}]));renderCards()},e=>console.error('mealSlots',e));
+ onSnapshot(collection(state.db,'christmas2026','main','publicMeals'),snap=>{const fresh=new Map();
+  const all=new Map();
+  for(const d of snap.docs){const data=d.data(),slot=getSlotId(data.branch,data.service);if(!slot)continue;const next={...data,id:d.id,legacy:true};
+   if(!all.has(slot))all.set(slot,[]);all.get(slot).push(next);
+   if(!fresh.has(slot)||((next.createdAt?.seconds||0)>(fresh.get(slot).createdAt?.seconds||0)))fresh.set(slot,next)}
+  state.legacy=fresh;state.legacyAll=all;for(const item of fresh.values())maybeLoadLegacy(item);renderCards()
+ },e=>console.error('legacy publicMeals',e));
+ onAuthStateChanged(getAuth(app),user=>{state.user=user;state.admin=!!(user?.emailVerified&&superusers.some(s=>s===user.email?.toLowerCase()));
+  state.pendingUnsub?.();state.pendingUnsub=null;state.requests.clear();renderCards();
+  if(state.admin){state.pendingUnsub=onSnapshot(collection(state.db,'christmas2026','main','mealChangeRequests'),snap=>{
+   state.requests=new Map(snap.docs.map(d=>[d.id,{...d.data(),id:d.id}]));renderCards();if(reviewDialog.open)drawReview();autoOpenMailReview()
+  },e=>console.error('mealChangeRequests read',e))}
+  else if(new URLSearchParams(location.search).has('review')){showToast('請先按右上角「管理者登入」，登入後即可審核此修改申請。')}
+ });
+}else{$('featuredMeals').innerHTML='<p class="meal-empty">Firebase 尚未設定，請確認 firebase-config.js。</p>'}
+renderCards();

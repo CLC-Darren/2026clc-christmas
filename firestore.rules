@@ -87,35 +87,8 @@ service cloud.firestore {
 
     match /christmas2026/main/publicMeals/{mealId} {
       allow get, list: if true;
-      allow create: if request.resource.data.keys().hasAll([
-          'branch', 'service', 'mealName', 'unitPrice',
-          'totalBudget', 'note', 'imageData', 'createdAt'
-        ])
-        && request.resource.data.keys().hasOnly([
-          'branch', 'service', 'mealName', 'unitPrice',
-          'totalBudget', 'note', 'imageData', 'photoCount', 'createdAt'
-        ])
-        && request.resource.data.get('photoCount', 1) is int
-        && request.resource.data.get('photoCount', 1) >= 1
-        && request.resource.data.get('photoCount', 1) <= 20
-        && shortString(request.resource.data.branch, 30)
-        && request.resource.data.branch.size() > 0
-        && shortString(request.resource.data['service'], 30)
-        && request.resource.data['service'].size() > 0
-        && shortString(request.resource.data.mealName, 80)
-        && request.resource.data.mealName.size() > 0
-        && request.resource.data.unitPrice is int
-        && request.resource.data.unitPrice >= 0
-        && request.resource.data.unitPrice <= 100000
-        && request.resource.data.totalBudget is int
-        && request.resource.data.totalBudget >= 0
-        && request.resource.data.totalBudget <= 5000000
-        && shortString(request.resource.data.note, 500)
-        && request.resource.data.imageData is string
-        && request.resource.data.imageData.size() > 100
-        && request.resource.data.imageData.size() <= 135000
-        && request.resource.data.imageData.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
-        && request.resource.data.createdAt == request.time;
+      // 舊 collection 僅保留公開讀取和管理員刪除，避免再新增重複的場次。
+      allow create: if false;
       allow update: if false;
       allow delete: if isAdmin();
     }
@@ -186,5 +159,66 @@ service cloud.firestore {
       allow get, list: if isAdmin();
       allow create, update, delete: if false;
     }
+    // 七個固定場次，每個 slot 只可有一筆正式餐點。
+    // 第一次建立不要求登入；之後只允許驗證後的 Superuser 更新。
+    function validMealSlot() {
+      let d = request.resource.data;
+      return d.keys().hasAll(['mealName','unitPrice','totalBudget','note','imageData','images','createdAt','updatedAt'])
+        && d.keys().hasOnly(['mealName','unitPrice','totalBudget','note','imageData','images','createdAt','updatedAt','lastApprovedBy'])
+        && shortString(d.mealName,80) && d.mealName.size() > 0
+        && d.unitPrice is int && d.unitPrice >= 0 && d.unitPrice <= 100000
+        && d.totalBudget is int && d.totalBudget >= 0 && d.totalBudget <= 5000000
+        && shortString(d.note,500)
+        && d.images is list && d.images.size() >= 1 && d.images.size() <= 20
+        && d.imageData is string && d.imageData.size() > 100 && d.imageData.size() <= 100000
+        && d.imageData.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
+        && d.images[0] == d.imageData;
+    }
+    function validMealSlotId(slotId) {
+      return slotId.matches('^(jiangcui-sunday|jiangcui-youth|jiangcui-evening|xinzhuang-sunday|xinzhuang-youth|linkou-sunday|linkou-youth)$');
+    }
+    match /christmas2026/main/mealSlots/{slotId} {
+      allow get,list: if true;
+      allow create: if validMealSlotId(slotId) && validMealSlot() && (
+        isAdmin() || (
+          request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time
+          && !request.resource.data.keys().hasAny(['lastApprovedBy'])
+        )
+      );
+      allow update: if isAdmin() && validMealSlot();
+      allow delete: if isAdmin();
+    }
+    // 認證以外的所有訪客只可建立待審核版本，不能直接覆蓋正式內容。
+    function validMealChange() {
+      let d = request.resource.data;
+      return d.keys().hasAll(['slotId','mealName','unitPrice','totalBudget','note','imageData','images','reporter','status','submittedAt'])
+        && d.keys().hasOnly(['slotId','mealName','unitPrice','totalBudget','note','imageData','images','reporter','status','submittedAt'])
+        && validMealSlotId(d.slotId)
+        && shortString(d.mealName,80) && d.mealName.size() > 0
+        && d.unitPrice is int && d.unitPrice >= 0 && d.unitPrice <= 100000
+        && d.totalBudget is int && d.totalBudget >= 0 && d.totalBudget <= 5000000
+        && shortString(d.note,500) && shortString(d.reporter,50)
+        && d.images is list && d.images.size() >= 1 && d.images.size() <= 20
+        && d.imageData is string && d.imageData.size() > 100 && d.imageData.size() <= 100000
+        && d.imageData.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
+        && d.images[0] == d.imageData
+        && d.status == 'pending' && d.submittedAt == request.time;
+    }
+    match /christmas2026/main/mealChangeRequests/{changeId} {
+      // 只有持有單筆亂數 ID 者能查看單筆修改；管理者才可列出全部。
+      // 此單筆讀取也供 Cloudflare Pages Function 寄送摘要時查證真實資料。
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create: if validMealChange();
+      allow update: if isAdmin()
+        && resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','reviewedAt','reviewedBy'])
+        && (request.resource.data.status == 'approved' || request.resource.data.status == 'rejected')
+        && request.resource.data.reviewedAt == request.time
+        && request.resource.data.reviewedBy == request.auth.token.email;
+      allow delete: if isAdmin();
+    }
+
   }
 }
