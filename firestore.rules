@@ -93,8 +93,11 @@ service cloud.firestore {
         ])
         && request.resource.data.keys().hasOnly([
           'branch', 'service', 'mealName', 'unitPrice',
-          'totalBudget', 'note', 'imageData', 'createdAt'
+          'totalBudget', 'note', 'imageData', 'photoCount', 'createdAt'
         ])
+        && request.resource.data.get('photoCount', 1) is int
+        && request.resource.data.get('photoCount', 1) >= 1
+        && request.resource.data.get('photoCount', 1) <= 20
         && shortString(request.resource.data.branch, 30)
         && request.resource.data.branch.size() > 0
         && shortString(request.resource.data['service'], 30)
@@ -113,6 +116,32 @@ service cloud.firestore {
         && request.resource.data.imageData.size() <= 135000
         && request.resource.data.imageData.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
         && request.resource.data.createdAt == request.time;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // 餐點額外相片需與新餐點在同一個 batch 建立，避免匿名附加到既有餐點。
+    function validNewMealPhoto(mealId) {
+      let parent = getAfter(/databases/$(database)/documents/christmas2026/main/publicMeals/$(mealId)).data;
+      let d = request.resource.data;
+      return d.keys().hasAll(['imageData', 'position', 'createdAt'])
+        && d.keys().hasOnly(['imageData', 'position', 'createdAt'])
+        && d.imageData is string
+        && d.imageData.size() > 100
+        && d.imageData.size() <= 135000
+        && d.imageData.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
+        && d.position is int
+        && d.position >= 1
+        && d.position < 20
+        && d.createdAt == request.time
+        && parent.createdAt == request.time
+        && parent.photoCount is int
+        && d.position < parent.photoCount;
+    }
+
+    match /christmas2026/main/publicMeals/{mealId}/photos/{photoId} {
+      allow get, list: if true;
+      allow create: if validNewMealPhoto(mealId);
       allow update: if false;
       allow delete: if isAdmin();
     }
