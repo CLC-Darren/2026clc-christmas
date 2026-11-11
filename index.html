@@ -34,6 +34,18 @@
         <div class="eyebrow"><span class="eyebrow-rule"></span> 2026 CLC SPECIAL CHRISTMAS</div>
         <h1>THE WAY<span class="hero-subtitle">特別聖誕季</span></h1>
         <p class="hero-verse">「我就是道路、真理、生命；若不藉著我，沒有人能到父那裡去。」<br><span>約翰福音 14:6</span></p>
+        <div class="hero-live-panel" aria-label="聖誕季即時新人回報">
+          <div class="hero-live-figure">
+            <div class="hero-live-label"><span class="hero-live-dot" aria-hidden="true"></span> NEW FRIENDS · 即時統計</div>
+            <div class="hero-live-total"><strong id="heroPeople" aria-live="polite">—</strong><span>位已回報新朋友</span></div>
+            <p class="hero-live-meta" id="heroCountMeta">數字與各場回報同步更新</p>
+            <div class="hero-live-branches" id="heroCountBreakdown" aria-label="各分堂回報統計"></div>
+          </div>
+          <div class="hero-quick-actions">
+            <button id="openCountFromHero" class="hero-action-primary" type="button">＋ 回報新人人數 <span aria-hidden="true">↗</span></button>
+            <button id="openMealFromHero" class="hero-action-outline" type="button">＋ 新增餐點提案 <span aria-hidden="true">↗</span></button>
+          </div>
+        </div>
         <div class="hero-bottom"><span>DEC 05 <i>—</i> DEC 27, 2026</span><a class="hero-link" href="#timeline">探索四週計畫 <span aria-hidden="true">↘</span></a></div>
       </div>
     </section>
@@ -46,14 +58,13 @@
         <div class="stat"><strong>04</strong><span>活動週數</span></div>
         <div class="stat"><strong>03</strong><span>配搭分堂</span></div>
         <div class="stat"><strong>600<span class="plus">+</span></strong><span>宏匯預估新朋友</span></div>
-        <div class="stat"><strong id="totalPeople">—</strong><span>已回報新人人數</span></div>
+        <div class="stat stat-people"><strong id="totalPeople">—</strong><span>已回報新人人數 · 即時</span></div>
       </div>
       <div id="connectionNotice" class="notice" role="status">網站正在載入...</div>
     </section>
     <section id="meals-showcase" class="container meals-showcase" aria-label="已提交餐點">
-      <div class="section-heading"><div><span class="kicker">CHRISTMAS HOSPITALITY</span><h2>各分堂餐點提案</h2></div><a class="meals-cta" href="#meals">＋ 免登入新增餐點 ↗</a></div>
+      <div class="section-heading"><div><span class="kicker">CHRISTMAS HOSPITALITY</span><h2>各分堂餐點提案</h2><p class="showcase-count">目前已上傳 <strong id="publicMealCount">0</strong> 筆餐點</p></div><button id="openMealFromShowcase" class="meals-cta" type="button">＋ 新增餐點提案 ↗</button></div>
       <div id="featuredMeals" class="public-meal-grid" aria-live="polite"><p class="meal-empty">正在讀取餐點提案...</p></div>
-      <a id="allMealsLink" class="meals-more" href="#meals" hidden>查看全部餐點提案 ↓</a>
     </section>
     <section id="timeline" class="timeline-section section-pad">
       <div class="container">
@@ -112,39 +123,14 @@
       </div>
       <div id="meals" class="block-heading"><div><span class="kicker">02 / BRANCHES</span><h3>三分堂餐點與預算</h3></div><p>不需登入，每項餐點只需一張照片、名稱、單價、總預算；備註可留白。</p></div>
       <div class="tip">江翠週六參考預算 <b>NT$ 8,000</b>（約 $120／新朋友）；主日 <b>NT$ 12,000</b>（約 $100／四人桌氛圍點心）。Life Cafe 已提供甜點、鹹食及咖啡，請評估互補性。各分堂仍須向主任牧師核定預算。</div>
-      <div class="meal-public-shell">
-        <form id="publicMealForm" class="meal-public-form" novalidate>
-          <div class="meal-form-top"><div><h4>新增餐點提案</h4><p>選好分堂與聚會場次，接著可一次填寫多筆餐點。</p></div><span class="meal-nologin">免登入 · 送出立即公布</span></div>
-          <div class="meal-selectors">
-            <label>分堂<select id="publicMealBranch" required><option value="">請選擇分堂</option><option value="江翠">江翠</option><option value="新莊">新莊</option><option value="林口">林口</option></select></label>
-            <label>聚會類別<select id="publicMealService" required disabled><option value="">請先選擇分堂</option></select></label>
-          </div>
-          <div id="publicMealRows" class="meal-entry-list"></div>
-          <div class="meal-form-actions"><button type="button" id="addPublicMeal" class="secondary-btn">＋ 新增一筆餐點</button><button type="submit" id="submitPublicMeals" class="primary-btn">送出餐點</button></div>
-          <p class="meal-form-message" id="publicMealMessage" role="status">請上傳餐點實拍照或示意照片。送出後立即在首頁顯示，只有管理員可刪除。</p>
-        </form>
-        <div class="meal-list-heading"><h4>已提交餐點 <span id="publicMealCount">0</span></h4><a href="#meals-showcase">回到首頁餐點區 ↑</a></div>
-        <div id="allPublicMeals" class="public-meal-grid"><p class="meal-empty">正在讀取已提交餐點...</p></div>
-      </div>
+      <div class="meal-inline-note"><span>所有餐點會集中顯示在首頁，方便同工查看照片與預算。</span><button id="openMealFromWorkstreams" class="secondary-btn" type="button">＋ 新增餐點</button></div>
       <div id="honghui" class="block-heading"><div><span class="kicker">03 / HONGHUI</span><h3>宏匯聖誕接待</h3></div><p>12/19–12/20，共四場；中央準備小禮物、點心和飲料。</p></div>
       <div id="honghuiCards" class="items-grid"></div>
     </section>
     <section id="attendees" class="count-section section-pad">
       <div class="container">
-        <div class="section-heading"><div><span class="kicker">NEW FRIENDS</span><h2>新人人數回報</h2></div><p>每場活動分別回報，免登入送出後立即公開並自動計入總數。</p></div>
-        <div class="count-layout">
-          <div class="count-panel">
-            <div class="count-panel-head"><h3>新增人數回報</h3><span id="formRole">免登入 · 直接公開</span></div><a id="originalFormLink" class="original-form-link" hidden target="_blank" rel="noopener noreferrer" href="https://docs.google.com/forms/d/1AzTEkqxydEYL1uA6kmDsQEg2PhH6r7Fv-rdm6vgZbAQ/edit">↗ 原 Google 表單（管理者參考）</a>
-            <form id="countForm" class="form-grid">
-              <label>活動日期<select id="countDate" name="date" required><option value="">選擇日期</option></select></label>
-              <label>分堂／活動<select id="countBranch" name="branch" required><option value="">選擇分堂</option><option value="江翠">江翠</option><option value="新莊">新莊</option><option value="林口">林口</option><option value="宏匯聖誕">宏匯聖誕</option></select></label>
-              <label>場次<select id="countService" name="service" required disabled><option value="">請先選擇分堂</option></select></label>
-              <label>新朋友人數<input id="countNumber" name="count" type="number" min="0" max="5000" step="1" placeholder="0" required></label>
-              <label class="full">填報人<input id="countReporter" name="reporter" maxlength="50" placeholder="姓名" required></label>
-              <label class="full">備註（選填）<textarea id="countNote" name="note" rows="2" maxlength="500" placeholder="例如：同場帶來者、需後續關懷資訊（請勿填個資）"></textarea></label>
-              <div class="full"><button class="primary-btn" id="countSubmit" type="submit">送出人數回報</button><small>送出後立即公開；填錯請通知管理者刪除，再重新填報。</small></div>
-            </form>
-          </div>
+        <div class="section-heading"><div><span class="kicker">NEW FRIENDS</span><h2>新人人數明細</h2><p>回報送出後，首頁主視覺與此處數字即時同步。</p></div><button id="openCountFromSection" class="meals-cta" type="button">＋ 回報人數 ↗</button></div>
+        <div class="count-layout count-layout-summary">
           <div class="count-summary">
             <div class="summary-head"><span>REPORT OVERVIEW</span><b id="countReportTotal">0 人</b></div>
             <div id="countRows" class="count-rows"><p class="muted">尚無回報資料。</p></div>
@@ -160,6 +146,37 @@
   </main>
   <nav class="mobile-nav" aria-label="手機快速導覽"><a href="#timeline">四週行程</a><a href="#workstreams">工作進度</a><a href="#attendees">新人回報</a><a href="#activity">提交紀錄</a></nav>
   <footer class="footer"><div class="container footer-inner"><div class="footer-name">THE WAY <span>2026 CHRISTMAS</span></div><div>CHANGE LIFE CHURCH · CLC PROJECT CENTER</div><a href="#overview">回到最上方 ↑</a></div></footer>
+  <dialog id="mealDialog" class="submission-dialog meal-submission-dialog" aria-labelledby="mealDialogTitle">
+    <div class="submission-dialog-head"><div><span class="kicker">CHRISTMAS HOSPITALITY</span><h2 id="mealDialogTitle">新增分堂餐點提案</h2><p>免登入填寫 · 送出後直接顯示在首頁</p></div><button id="mealDialogClose" class="submission-dialog-close" type="button" aria-label="關閉餐點填寫視窗">×</button></div>
+    <div class="submission-dialog-body">
+<form id="publicMealForm" class="meal-public-form" novalidate>
+          <div class="meal-form-top"><div><h4>新增餐點提案</h4><p>選好分堂與聚會場次，接著可一次填寫多筆餐點。</p></div><span class="meal-nologin">免登入 · 送出立即公布</span></div>
+          <div class="meal-selectors">
+            <label>分堂<select id="publicMealBranch" required><option value="">請選擇分堂</option><option value="江翠">江翠</option><option value="新莊">新莊</option><option value="林口">林口</option></select></label>
+            <label>聚會類別<select id="publicMealService" required disabled><option value="">請先選擇分堂</option></select></label>
+          </div>
+          <div id="publicMealRows" class="meal-entry-list"></div>
+          <div class="meal-form-actions"><button type="button" id="addPublicMeal" class="secondary-btn">＋ 新增一筆餐點</button><button type="submit" id="submitPublicMeals" class="primary-btn">送出餐點</button></div>
+          <p class="meal-form-message" id="publicMealMessage" role="status">請上傳餐點實拍照或示意照片。送出後立即在首頁顯示，只有管理員可刪除。</p>
+        </form>
+    </div>
+  </dialog>
+  <dialog id="countDialog" class="submission-dialog count-submission-dialog" aria-labelledby="countDialogTitle">
+    <div class="submission-dialog-head"><div><span class="kicker">NEW FRIENDS</span><h2 id="countDialogTitle">回報新人人數</h2><p>免登入填寫 · 送出後即時計入首頁總數</p></div><button id="countDialogClose" class="submission-dialog-close" type="button" aria-label="關閉新人回報視窗">×</button></div>
+    <div class="submission-dialog-body">
+      <div class="count-dialog-tip"><span id="formRole">免登入 · 直接公開</span>　請依分堂及活動日期選擇場次</div>
+      <a id="originalFormLink" class="original-form-link" hidden target="_blank" rel="noopener noreferrer" href="https://docs.google.com/forms/d/1AzTEkqxydEYL1uA6kmDsQEg2PhH6r7Fv-rdm6vgZbAQ/edit">↗ 原 Google 表單（管理者參考）</a>
+      <form id="countForm" class="form-grid">
+              <label>活動日期<select id="countDate" name="date" required><option value="">選擇日期</option></select></label>
+              <label>分堂／活動<select id="countBranch" name="branch" required><option value="">選擇分堂</option><option value="江翠">江翠</option><option value="新莊">新莊</option><option value="林口">林口</option><option value="宏匯聖誕">宏匯聖誕</option></select></label>
+              <label>場次<select id="countService" name="service" required disabled><option value="">請先選擇分堂</option></select></label>
+              <label>新朋友人數<input id="countNumber" name="count" type="number" min="0" max="5000" step="1" placeholder="0" required></label>
+              <label class="full">填報人<input id="countReporter" name="reporter" maxlength="50" placeholder="姓名" required></label>
+              <label class="full">備註（選填）<textarea id="countNote" name="note" rows="2" maxlength="500" placeholder="例如：同場帶來者、需後續關懷資訊（請勿填個資）"></textarea></label>
+              <div class="full"><button class="primary-btn" id="countSubmit" type="submit">送出人數回報</button><small>送出後立即公開；填錯請通知管理者刪除，再重新填報。</small></div>
+            </form>
+    </div>
+  </dialog>
   <dialog id="editDialog" class="edit-dialog">
     <form id="editForm">
       <div class="dialog-head"><div><span class="kicker" id="editKicker">PROJECT UPDATE</span><h2 id="editTitle">工作項目</h2></div><button id="closeDialog" type="button" class="icon-close" aria-label="關閉">×</button></div>
@@ -181,8 +198,9 @@
   </dialog>
   <dialog id="installHelpDialog" class="install-help-dialog" aria-labelledby="installHelpTitle"><div class="install-help-header"><h2 id="installHelpTitle">安裝到裝置</h2><button id="installHelpClose" type="button" aria-label="關閉說明">×</button></div><p id="installHelpText"></p><button type="button" id="installHelpDone" class="primary-btn">知道了</button></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="app.js?v=20261111-gallery"></script>
-  <script type="module" src="meal-public.js?v=20261110-fix1"></script>
+  <script type="module" src="app.js?v=20261111-modals"></script>
+  <script type="module" src="meal-public.js?v=20261111-modals"></script>
+  <script defer src="modal-ui.js?v=20261111"></script>
   <script defer src="pwa.js?v=20261111"></script>
 </body>
 </html>

@@ -143,3 +143,52 @@
 .install-help-dialog p{font-size:14px;line-height:1.9;color:#536b58;white-space:pre-line}
 @media(max-width:720px){.brand{gap:7px}.brand b{display:inline}.header-actions{gap:5px}.install-app-button{padding:7px 9px;font-size:10px}.auth-button{padding:7px 9px;font-size:10px}.central-gallery-stage{grid-template-columns:31px minmax(0,1fr) 31px;padding:8px 7px}.central-gallery-arrow{width:31px;height:38px;font-size:28px}.central-gallery-stage img{height:min(55dvh,450px)}.central-gallery-head{padding:13px 14px}.central-gallery-toolbar{padding-inline:12px}.central-gallery-thumbs{padding:10px 12px 15px}.gallery-thumb{width:62px;min-width:62px;height:56px}}
 @media(max-width:385px){.brand{gap:4px;letter-spacing:.06em}.brand span:last-child{font-size:8px}.install-app-button{font-size:0;padding:6px 8px}.install-app-button:after{content:"安裝";font-size:11px}.auth-button{font-size:10px}}
+
+/* 2026-11-11: homepage actions, single-source pop-up forms and live report visual */
+.hero{min-height:610px}
+.hero-content{padding-bottom:44px}
+.hero-live-panel{display:flex;gap:30px;align-items:center;justify-content:space-between;margin-top:35px;padding:22px 27px;border:1px solid rgba(255,232,182,.36);border-radius:18px;background:linear-gradient(125deg,rgba(11,31,21,.72),rgba(35,62,44,.56));box-shadow:0 16px 44px #07190d36;backdrop-filter:blur(7px)}
+.hero-live-figure{min-width:0;flex:1}
+.hero-live-label{font-size:11px;letter-spacing:.14em;font-weight:800;color:#f6dba2;display:flex;align-items:center;gap:8px}
+.hero-live-dot{width:8px;height:8px;flex:none;border-radius:99px;background:#eac478;box-shadow:0 0 0 4px #eac4782a}
+.hero-live-total{display:flex;align-items:baseline;gap:12px;margin-top:8px}
+.hero-live-total strong{font-size:clamp(44px,5.2vw,72px);font-weight:800;line-height:1.12;letter-spacing:-.07em;color:#ffdf9c;font-variant-numeric:tabular-nums}
+.hero-live-total span{font-size:14px;font-weight:700;color:#fff6e4}
+.hero-live-meta{font-size:12px;color:#e0e5d8;margin:5px 0 0}
+.hero-live-branches{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
+.hero-live-branches span{border:1px solid #ffffff2d;padding:5px 9px;border-radius:99px;color:#f6f6ed;font-size:11px}
+.hero-live-branches b{color:#e9c477;margin-right:3px}
+.hero-quick-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:end;max-width:380px}
+.hero-action-primary,.hero-action-outline{cursor:pointer;border-radius:11px;padding:13px 16px;font-weight:750;font-family:inherit;font-size:13px;white-space:nowrap;transition:transform .15s,background .15s}
+.hero-action-primary:hover,.hero-action-outline:hover{transform:translateY(-2px)}
+.hero-action-primary{border:1px solid #e9bf70;background:#e9bf70;color:#1e3929}
+.hero-action-outline{border:1px solid #e8d3a9;color:#fff7e6;background:#ffffff0e}
+.hero-action-primary span,.hero-action-outline span{margin-left:9px}
+.hero-bottom{margin-top:28px}
+.stat-people{background:#f7edcf;padding-left:18px!important;border-radius:12px}
+.stat-people strong{color:#936321}
+.showcase-count{margin:4px 0 0;color:#748071;font-size:12px}
+.showcase-count strong{color:#a57c3e}
+button.meals-cta{border:0;cursor:pointer;font-family:inherit}
+.meal-inline-note{margin-top:17px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:13px;padding:18px 21px;background:#f1f2e9;border-radius:13px;font-size:13px;color:#52624f}
+.meal-inline-note .secondary-btn{cursor:pointer}
+.count-layout-summary{grid-template-columns:1fr;max-width:900px;margin:0 auto}
+.submission-dialog{position:fixed;inset:0;width:min(760px,calc(100vw - 26px));max-width:calc(100vw - 26px);max-height:min(91dvh,920px);padding:0;background:var(--paper);border:1px solid #d8ded3;border-radius:20px;color:var(--ink);box-shadow:0 30px 100px #04180e66;overflow:hidden}
+.submission-dialog::backdrop{background:#091b13b8;backdrop-filter:blur(4px)}
+.submission-dialog-head{display:flex;justify-content:space-between;gap:18px;padding:22px 27px;background:#faf9f4;border-bottom:1px solid #e4e8dc;align-items:start}
+.submission-dialog-head h2{font-size:clamp(21px,2.8vw,29px);margin:7px 0 4px;letter-spacing:-.03em}
+.submission-dialog-head p{margin:0;color:#6e7b6e;font-size:12px}
+.submission-dialog-close{border:1px solid #d9e0d5;border-radius:100px;background:#fff;color:#4c5a4d;cursor:pointer;font-size:24px;line-height:1;width:38px;height:38px;flex:none}
+.submission-dialog-body{max-height:calc(min(91dvh,920px) - 112px);overflow:auto;overscroll-behavior:contain;padding:20px 25px 27px}
+.submission-dialog .meal-public-form{border:0;box-shadow:none;background:transparent;padding:0}
+.submission-dialog .meal-public-form .meal-form-top{display:none}
+.submission-dialog .meal-entry{background:#f7f9f3}
+.submission-dialog .meal-form-message{margin-bottom:0}
+.count-submission-dialog{width:min(660px,calc(100vw - 26px))}
+.count-dialog-tip{font-size:12px;color:#77623d;background:#f8edda;border-radius:9px;padding:10px 12px;margin-bottom:15px}
+.count-submission-dialog .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.count-submission-dialog .form-grid .full{grid-column:1/-1}
+.count-submission-dialog .form-grid input,.count-submission-dialog .form-grid select,.count-submission-dialog .form-grid textarea{background:#fff}
+.count-submission-dialog .original-form-link{margin:0 0 15px}
+@media(max-width:760px){.hero{min-height:570px}.hero-content{padding-top:48px}.hero-live-panel{margin-top:26px;flex-direction:column;align-items:stretch;padding:17px 19px;gap:17px}.hero-quick-actions{max-width:none;justify-content:stretch}.hero-quick-actions button{flex:1}.hero-live-total strong{font-size:clamp(42px,10vw,62px)}.hero-live-total span{font-size:12px}.hero-bottom{margin-top:24px}.stat-people{padding-left:12px!important}}
+@media(max-width:480px){.hero{min-height:0}.hero h1{margin-top:25px}.hero-live-panel{padding:15px 14px}.hero-quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hero-action-primary,.hero-action-outline{font-size:11px;padding:12px 8px;white-space:normal}.hero-action-primary span,.hero-action-outline span{margin-left:2px}.hero-live-branches{gap:5px}.hero-live-branches span{font-size:10px;padding:3px 6px}.hero-bottom{margin-top:20px}.stat-people{padding-left:10px!important}.submission-dialog-head{padding:17px 16px}.submission-dialog-body{padding:15px 15px 22px;max-height:calc(91dvh - 95px)}.count-submission-dialog .form-grid{grid-template-columns:1fr}.count-submission-dialog .form-grid .full{grid-column:1}.submission-dialog .meal-prices{grid-template-columns:1fr}.hero-verse{line-height:1.7}}

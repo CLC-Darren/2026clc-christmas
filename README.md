@@ -1,3 +1,32 @@
+# 2026 CLC Christmas｜2026/11/11 首頁彈出表單更新
+
+本更新包是**整站可部署版本**，以「中央物資多張相簿＋聖誕樹 PWA」的上一版完整網站為基礎，新增兩項首頁操作：
+
+- 首頁 THE WAY 視覺內直接顯示「已回報新朋友總數」及江翠／新莊／林口／宏匯四個分類統計；數字沿用現有 Firestore `christmas2026/main/counts` 即時同步、管理者刪除後自動重新計算。
+- 「＋回報新人人數」開啟 Pop-up；保留原本 8 個日期及依分堂的場次：江翠 5 場，新莊與林口各 3 場，宏匯 4 場依日期分配。送出直接公開，不需要登入或審核。
+- 「＋新增餐點提案」開啟 Pop-up；可一次新增多筆餐點，原來的照片、名稱、單價、總預算、備註等欄位全部保留。
+- 上方餐點區**顯示所有已提交餐點**，不再在下方重複顯示同一份餐點清單。管理者刪除按鈕移至上方展示卡片。
+- 下方保留餐點預算提醒與新人人數明細，但移除重複的填報表單；其新增按鈕也會開啟同一個 Pop-up。
+- 沒有修改 Firebase 資料格式、Firestore Rules、後端權限、中央照片相簿或 PWA 安裝設定。
+
+## 手動部署（一次即可）
+
+1. 解壓縮本 ZIP。登入 GitHub，開啟 Repository `CLC-Darren/2026clc-christmas` 的預設分支。
+2. 選擇 **Add file → Upload files**，將此 ZIP 解壓後的檔案與資料夾上傳到 Repository 根目錄（不是 ZIP 檔本身），維持 `assets/`、`functions/` 資料夾路徑。點選 **Commit changes**。
+3. Cloudflare Pages → **Deployments**，確認 Production 部署完成，瀏覽器按 **Ctrl+F5**（手機可使用無痕模式）重新開啟。原本 `firebase-config.js` 的公開 Web 設定已沿用，不必重建 Firebase。
+4. **此版不需要重新 Publish Firestore Rules**；`firestore.rules` 仍隨 ZIP 保留作為備份。若你的 Firebase 正在使用先前公布、可匿名新增餐點／人數的最新版規則，維持不動即可。
+
+## 驗收
+
+- 打開首頁，不用登入，按「＋新增餐點提案」會顯示 Pop-up；可新增數筆並填寫，完成後回到首頁餐點展示。
+- 不登入，按「＋回報新人人數」會開啟 Pop-up，先選日期，再選分堂與場次，送出後首頁黃金色的大數字及分堂統計會同步增加。
+- 滾到下方只有資料說明／明細，不會再出現第二份重複填報表單。
+- 以兩位既有管理者帳號登入時，仍可在首頁餐點卡片、回報明細刪除錯誤資料。
+
+> 注意：本機已完成 HTML/JavaScript 語法、離線瀏覽器 Popup 與手機排版測試；尚未連線到你的正式 Firestore 對真實帳號寫入測試。正式部署後請先用一筆小型測試資料確認同步，再刪除測試資料。
+
+---
+
 # 2026 CLC 特別聖誕季｜THE WAY
 
 這是一個 **Cloudflare Pages + Firebase Authentication + Firestore** 的輕量靜態網站。GitHub 保存檔案，Cloudflare 發布網站。僅使用一般瀏覽器，不需要 Work、Codex、CLI、Node.js 編譯或 Firebase Storage。

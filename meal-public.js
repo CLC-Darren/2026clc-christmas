@@ -90,11 +90,13 @@ async function send(e){
     localStorage.removeItem(key);rows.innerHTML='';mealRow();
 
     // 主動重新取得 server 資料，避免只等即時監聽器更新而讓使用者看不到新卡片。
+    let confirmedVisible=false;
     try{
       const snapshot=await getDocsFromServer(col);
       applyMealSnapshot(snapshot);
       const visible=savedIds.every(id=>snapshot.docs.some(d=>d.id===id));
       if(visible){
+        confirmedVisible=true;
         message(`已送出 ${entries.length} 筆餐點，並確認顯示於首頁（目前共 ${meals.length} 筆）。`);
       }else{
         message('資料已儲存至 Firebase，但公開清單尚未找到本次餐點。請不要重複送出；請至 Firebase → Firestore Database → Data 檢查 publicMeals。',true);
@@ -103,6 +105,8 @@ async function send(e){
       console.error('publicMeals readback error',readError);
       message('餐點已儲存，但無法重新讀取公開清單（'+(readError.code||readError.message||'未知錯誤')+'）。請不要重複送出；請檢查 Firestore Rules 的 publicMeals 讀取權限。',true);
     }
+    document.getElementById('mealDialog')?.close();
+    window.dispatchEvent(new CustomEvent('clc:meal-saved',{detail:{count:entries.length,verified:confirmedVisible}}));
     $('meals-showcase').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(err){
     console.error('publicMeals write error',err);
@@ -113,13 +117,16 @@ async function send(e){
 }
 function cardHTML(item,withAdmin){return `<article class="public-meal-card"><div class="public-meal-image"><img src="${esc(item.imageData)}" alt="${esc(item.mealName)}" loading="lazy"></div>
   <div class="public-meal-content"><div class="public-meal-tags"><span>${esc(item.branch)}</span><span>${esc(item.service)}</span></div><h4>${esc(item.mealName)}</h4><div class="public-meal-price"><span>每套 ${money(item.unitPrice)}</span><b>總預算 ${money(item.totalBudget)}</b></div>${item.note?`<p>${esc(item.note)}</p>`:''}${withAdmin?`<button type="button" class="meal-admin-delete" data-meal-delete="${esc(item.id)}">刪除此筆</button>`:''}</div></article>`}
-function render(){const sorted=[...meals].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));const all=$('allPublicMeals'),featured=$('featuredMeals');
+function render(){
+  const sorted=[...meals].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+  const featured=$('featuredMeals');
   $('publicMealCount').textContent=sorted.length;
-  if(!sorted.length){all.innerHTML=featured.innerHTML='<p class="meal-empty">目前尚無餐點提案。歡迎各分堂先上傳第一筆！</p>';$('allMealsLink').hidden=true;return}
-  featured.innerHTML=sorted.slice(0,6).map(r=>cardHTML(r,false)).join('');
-  all.innerHTML=sorted.map(r=>cardHTML(r,admin)).join('');
-  $('allMealsLink').hidden=sorted.length<=6;
-  all.querySelectorAll('[data-meal-delete]').forEach(b=>b.addEventListener('click',()=>removeMeal(b.dataset.mealDelete)));
+  if(!sorted.length){
+    featured.innerHTML='<p class="meal-empty">目前尚無餐點提案。歡迎各分堂先上傳第一筆！</p>';
+    return;
+  }
+  featured.innerHTML=sorted.map(r=>cardHTML(r,admin)).join('');
+  featured.querySelectorAll('[data-meal-delete]').forEach(b=>b.addEventListener('click',()=>removeMeal(b.dataset.mealDelete)));
 }
 async function removeMeal(id){if(!admin)return;const item=meals.find(m=>m.id===id);if(!item||!confirm(`Superuser 確定刪除「${item.mealName}」？刪除後無法復原。`))return;
   try{await deleteDoc(doc(db,'christmas2026','main','publicMeals',id));message('管理員已刪除這筆餐點。')}
@@ -133,6 +140,6 @@ loadLocal();
 const configured=!Object.values(firebaseConfig).some(v=>!v||String(v).includes('PASTE_'));
 if(configured){
   const app=getApps()[0]||initializeApp(firebaseConfig);db=getFirestore(app);
-  onSnapshot(collection(db,'christmas2026','main','publicMeals'),applyMealSnapshot,err=>{console.error('publicMeals listener error',err);$('featuredMeals').innerHTML=$('allPublicMeals').innerHTML='<p class="meal-empty">餐點清單讀取失敗（'+esc(err.code||err.message||'未知錯誤')+'）。請檢查 Firestore Rules 的 publicMeals allow list 權限，然後重新整理。</p>';});
+  onSnapshot(collection(db,'christmas2026','main','publicMeals'),applyMealSnapshot,err=>{console.error('publicMeals listener error',err);$('featuredMeals').innerHTML='<p class="meal-empty">餐點清單讀取失敗（'+esc(err.code||err.message||'未知錯誤')+'）。請檢查 Firestore Rules 的 publicMeals allow list 權限，然後重新整理。</p>';});
   onAuthStateChanged(getAuth(app),user=>{admin=!!(user?.emailVerified&&superusers.includes((user.email||'').toLowerCase()));render()});
-}else{$('featuredMeals').innerHTML=$('allPublicMeals').innerHTML='<p class="meal-empty">Firebase 尚未設定，完成後將自動顯示已提交餐點。</p>';message('請先完成 Firebase 設定才可送出餐點。',true)}
+}else{$('featuredMeals').innerHTML='<p class="meal-empty">Firebase 尚未設定，完成後將自動顯示已提交餐點。</p>';message('請先完成 Firebase 設定才可送出餐點。',true)}
