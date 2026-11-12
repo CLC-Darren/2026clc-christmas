@@ -2,8 +2,8 @@
  * 2026 CLC 特別聖誕季：節點前一天早上 9 點（台北時間）寄提醒信。
  *
  * 使用方式（只要做一次）：
- * 1. 到 https://script.google.com 新增專案，把這整個檔案貼進去，存檔。
- * 2. 上方函式選單選 setupTriggers，按「執行」，依畫面授權（用要寄信的那個 Google 帳號）。
+ * 1. 用 darren710404@gmail.com 登入 https://script.google.com 新增專案，把這整個檔案貼進去，存檔。
+ * 2. 上方函式選單選 setupTriggers，按「執行」，依畫面授權（請用 darren710404@gmail.com 登入，信會從這個帳號寄出）。
  * 3. 想先試寄：選 sendTestEmail 按「執行」，會馬上寄一封【測試】信。
  * 之後改日期、內容或收件人：改下面的設定，再執行一次 setupTriggers。
  */
