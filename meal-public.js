@@ -57,7 +57,7 @@ function groupHTML(g){const slot=groupSlot(g),item=effective(slot),tabs=g.slots.
 let suppressGalleryClickUntil=0;
 function slide(slot,step){const images=imagesFor(effective(slot));if(images.length<2)return;state.positions.set(slot,((state.positions.get(slot)||0)+step+images.length)%images.length);renderCards()}
 function renderCards(){const root=$('featuredMeals');if(!root)return;root.innerHTML=groups.map(groupHTML).join('');
- $('publicMealCount').textContent=Object.keys(slotMeta).filter(s=>!!effective(s)).length;
+ 
  root.querySelectorAll('[data-select-slot]').forEach(b=>b.addEventListener('click',()=>{state.activeTabs.set(b.dataset.group,b.dataset.selectSlot);renderCards()}));
  root.querySelectorAll('[data-edit-slot]').forEach(b=>b.addEventListener('click',()=>openEditor(b.dataset.editSlot)));
  root.querySelectorAll('[data-slide]').forEach(b=>b.addEventListener('click',()=>slide(b.dataset.slide,Number(b.dataset.step))));
