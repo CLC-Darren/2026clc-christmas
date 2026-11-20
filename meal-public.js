@@ -70,17 +70,45 @@ function renderCards(){const root=$('featuredMeals');if(!root)return;root.innerH
  root.querySelectorAll('[data-review-slot]').forEach(b=>b.addEventListener('click',()=>openReview(b.dataset.reviewSlot)));
  root.querySelectorAll('[data-delete-slot]').forEach(b=>b.addEventListener('click',()=>deleteEntry(b.dataset.deleteSlot)));
 }
-async function resizeImage(source,maxChars){let image;
- if(source instanceof File&&source.size>12*1024*1024)throw Error('單張原始照片不可超過 12 MB');
- const url=source instanceof File?URL.createObjectURL(source):source;
- try{image=await new Promise((ok,bad)=>{const img=new Image();img.onload=()=>ok(img);img.onerror=()=>bad(Error('無法讀取這個照片格式，請改選 JPG、PNG 或 WebP'));img.src=url});
+function decodeImage(url){
+ return new Promise((resolve,reject)=>{
+  const image=new Image();
+  image.onload=()=>resolve(image);
+  image.onerror=()=>reject(Error('無法解碼照片'));
+  image.src=url;
+ });
+}
+async function readPhoto(file){
+ if(!file.size)throw Error('選到的檔案沒有內容，請從「我的檔案」重新選取截圖');
+ if(file.size>12*1024*1024)throw Error('單張原始照片不可超過 12 MB');
+ const url=URL.createObjectURL(file);
+ try{
+  return await decodeImage(url);
+ }catch{
+  // Some Android file providers can be read by FileReader even when a blob URL fails to load.
+  const dataUrl=await new Promise((resolve,reject)=>{
+   const reader=new FileReader();
+   reader.onload=()=>resolve(reader.result);
+   reader.onerror=reader.onabort=()=>reject(Error('無法讀取檔案，請從「我的檔案」重新選取截圖'));
+   reader.readAsDataURL(file);
+  });
+  try{
+   return await decodeImage(dataUrl);
+  }catch{
+   throw Error('無法開啟這張照片，請改選 PNG、JPG 或 WebP 檔案');
+  }
+ }finally{
+  URL.revokeObjectURL(url);
+ }
+}
+async function resizeImage(source,maxChars){
+ const image=await (source instanceof File?readPhoto(source):decodeImage(source));
  let side=920,quality=.78;
  for(let i=0;i<20;i++){
   const scale=Math.min(1,side/Math.max(image.naturalWidth,image.naturalHeight)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
   const result=canvas.toDataURL('image/jpeg',quality);if(result.length<=maxChars)return result;quality=Math.max(.23,quality-.055);side=Math.max(240,Math.round(side*.86));
  }
  throw Error('照片太複雜，壓縮失敗');
- }finally{if(source instanceof File)URL.revokeObjectURL(url)}
 }
 async function prepareImageList(){const target=Math.min(95000,Math.floor(MAX_TOTAL_CHARS/Math.max(1,state.images.length)));
  let result=[];for(let i=0;i<state.images.length;i++){const photo=state.images[i];result.push(photo.length<=target?photo:await resizeImage(photo,target))}
@@ -162,7 +190,11 @@ async function openEditor(slot){if(!slotMeta[slot])return;state.currentSlot=slot
 }
 const dropZone=$('mealUploadZone'),photoInput=$('mealPhotoInput');
 photoInput.addEventListener('change',async()=>{
- const files=Array.from(photoInput.files);
+ const files=Array.from(photoInput.files||[]);
+ if(!files.length){
+  photoStatus('沒有收到照片，請從「我的檔案」重新選取截圖。',true);
+  return;
+ }
  await addFiles(files);
  photoInput.value='';
 });
