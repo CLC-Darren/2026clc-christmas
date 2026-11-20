@@ -8,12 +8,14 @@ const reactions=[
   ['laugh','😆','哈'],['wow','😮','哇'],['sad','😢','難過'],['angry','😡','生氣']
 ];
 const labels=new Map(reactions.map(([id,icon,label])=>[id,{icon,label}]));
+const thumbOutline='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M8 20H4V10h4m0 10h9.2a2 2 0 0 0 1.97-1.66l1.18-6.5A1.6 1.6 0 0 0 18.77 10H15l.55-3.55A2.28 2.28 0 0 0 13.3 4L8 10m0 10V10"/></svg>';
 const storageKey='clc-photo-reactions-v1';
 let local={};
 try{local=JSON.parse(localStorage.getItem(storageKey))||{}}catch{}
 const channels=new Map();
 let services;
 let guestSignIn;
+let guestUnavailable=false;
 
 function firebase(){
   if(!services){
@@ -40,26 +42,33 @@ function photoKey(album,src){
 
 function refresh(channel){
   const uid=services?.auth.currentUser?.uid;
-  const reaction=channel.mode==='shared'?channel.votes.get(uid):local[channel.key];
+  const shared=channel.mode==='shared';
+  const localOnly=!shared||guestUnavailable||(!uid&&!!local[channel.key]);
+  const reaction=localOnly?local[channel.key]:channel.votes.get(uid);
   const {icon,label}=labels.get(reaction)||labels.get('like');
   const counts=new Map();
-  const votes=channel.mode==='shared'?[...channel.votes.values()]:reaction?[reaction]:[];
+  const votes=shared?[...channel.votes.values()]:[];
+  if(localOnly&&reaction)votes.push(reaction);
   for(const vote of votes)counts.set(vote,(counts.get(vote)||0)+1);
   const icons=[...counts].sort((a,b)=>b[1]-a[1]).slice(0,3).map(([id])=>labels.get(id).icon).join('');
-  const localOnly=channel.mode==='local';
   for(const root of channel.roots){
     const button=root.querySelector('.photo-like');
     button.setAttribute('aria-pressed',String(!!reaction));
     button.disabled=channel.busy||channel.mode==='loading';
-    button.querySelector('.photo-like-icon').textContent=icon;
-    button.querySelector('.photo-like-label').textContent=label;
+    button.setAttribute('aria-label',reaction?`收回表情：${label}`:'按讚');
+    button.title=button.getAttribute('aria-label');
+    const iconSlot=button.querySelector('.photo-like-icon');
+    if(reaction)iconSlot.textContent=icon;
+    else if(!iconSlot.querySelector('svg'))iconSlot.innerHTML=thumbOutline;
     const count=root.querySelector('.photo-reaction-count');
     count.textContent=channel.mode==='loading'?'…':votes.length.toLocaleString('zh-TW');
-    count.title=localOnly?'此瀏覽器的表情數':'所有訪客的表情數';
+    count.title=localOnly?(shared?'共用總數及此瀏覽器的表情':'此瀏覽器的表情數'):'所有訪客的表情數';
     const summary=root.querySelector('.photo-reaction-summary');
     summary.textContent=icons;
     summary.title=[...counts].map(([id,value])=>labels.get(id).label+' '+value).join('、');
-    root.querySelector('.photo-local-label').hidden=!localOnly;
+    const localLabel=root.querySelector('.photo-local-label');
+    localLabel.textContent=shared?'含本機':'本機';
+    localLabel.hidden=channel.mode==='loading'||!localOnly;
     root.querySelectorAll('[data-reaction]').forEach(option=>{
       option.disabled=channel.busy||channel.mode==='loading';
       option.setAttribute('aria-pressed',String(option.dataset.reaction===reaction));
@@ -99,17 +108,22 @@ function unsubscribe(channel,root){
   });
 }
 
+function saveLocal(){
+  try{localStorage.setItem(storageKey,JSON.stringify(local))}catch{}
+}
+
 function changeLocal(channel,kind,toggle){
   if(toggle&&local[channel.key])delete local[channel.key];
   else if(local[channel.key]===kind)delete local[channel.key];
   else local[channel.key]=kind;
-  try{localStorage.setItem(storageKey,JSON.stringify(local))}catch{}
-  channel.mode='local';
+  saveLocal();
 }
 
 async function react(channel,kind,toggle=false){
   if(!channel||channel.busy||channel.mode==='loading')return;
-  if(channel.mode==='local'){
+  const localReaction=local[channel.key];
+  const removingLocal=localReaction&&!services?.auth.currentUser&&(toggle||localReaction===kind);
+  if(channel.mode==='local'||guestUnavailable||removingLocal){
     changeLocal(channel,kind,toggle);
     refresh(channel);
     return;
@@ -122,10 +136,18 @@ async function react(channel,kind,toggle=false){
     const vote=doc(channel.ref,user.uid);
     if(previous&&(toggle||previous===kind))await deleteDoc(vote);
     else await setDoc(vote,{kind});
+    if(localReaction){
+      delete local[channel.key];
+      saveLocal();
+    }
   }catch(error){
-    const message=error.code==='auth/operation-not-allowed'
-      ?'共用表情尚未啟用訪客登入。':'表情未更新，請再試一次。';
-    channel.roots.forEach(root=>{root.querySelector('[role="status"]').textContent=message});
+    if(['auth/admin-restricted-operation','auth/operation-not-allowed'].includes(error.code)){
+      guestUnavailable=true;
+      changeLocal(channel,kind,toggle);
+      channels.forEach(refresh);
+    }else{
+      channel.roots.forEach(root=>{root.querySelector('[role="status"]').textContent='表情未更新，請再試一次。'});
+    }
   }finally{
     channel.busy=false;
     refresh(channel);
@@ -149,7 +171,7 @@ class PhotoReactionsBar extends HTMLElement{
     if(!key)return;
     this.innerHTML=`<div class="photo-reaction-controls">
       <button type="button" class="photo-like" aria-pressed="false">
-        <span class="photo-like-icon" aria-hidden="true">👍</span><span class="photo-like-label">讚</span>
+        <span class="photo-like-icon" aria-hidden="true">${thumbOutline}</span>
       </button>
       <span class="photo-reaction-count" aria-label="表情數">…</span>
       <details class="photo-emoji">

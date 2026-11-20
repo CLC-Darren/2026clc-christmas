@@ -1,5 +1,5 @@
 // 2026 CLC Christmas：所有表單免登入，新增即公開；只有兩位 Superuser 可刪除。
-import {renderPhotoSocial,sharedPhoto} from './photo-social.js?v=20261120-photo-reactions';
+import {renderPhotoSocial,sharedPhoto} from './photo-social.js?v=20261120-reaction-outline';
 import {firebaseConfig,superusers} from './firebase-config.js';
 const configured=!Object.values(firebaseConfig).some(v=>!v||String(v).includes('PASTE_'));
 const [appSDK,authSDK,dbSDK]=configured?await Promise.all([
