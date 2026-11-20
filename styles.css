@@ -125,8 +125,10 @@
 .central-gallery-head small{font-size:14px;letter-spacing:.12em;font-weight:750;color:#8c6e36}
 .central-gallery-head h2{font-size:21px;margin:3px 0 0}
 .central-gallery-close,.install-help-header button{font-size:30px;line-height:1;background:none;border:0;color:#697b6b;padding:4px 8px}
-.central-gallery-stage{display:grid;grid-template-columns:50px minmax(0,1fr) 50px;gap:8px;align-items:center;padding:12px 12px 2px;min-height:220px}
-.central-gallery-stage img{display:block;object-fit:contain;max-width:100%;width:100%;height:min(58dvh,550px);background:#edf1ec;border-radius:9px}
+.central-gallery-stage{display:grid;grid-template-columns:50px minmax(0,1fr) 50px;grid-template-areas:"previous photo next";gap:8px;align-items:center;padding:12px 12px 2px;min-height:220px}
+.central-gallery-stage > .central-gallery-arrow:first-child{grid-area:previous}
+.central-gallery-stage > .central-gallery-arrow:last-child{grid-area:next}
+.central-gallery-stage img{grid-area:photo;display:block;object-fit:contain;max-width:100%;width:100%;height:min(58dvh,550px);background:#edf1ec;border-radius:9px}
 .central-gallery-arrow{width:43px;height:43px;border-radius:50%;border:1px solid #d9dfd0;color:#213e32;background:white;font-size:33px;line-height:1}
 .central-gallery-arrow:hover:not(:disabled){background:#f1e4c6}
 .central-gallery-arrow:disabled{opacity:.2;cursor:default}
