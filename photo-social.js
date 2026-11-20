@@ -46,11 +46,7 @@ function refresh(channel){
   const localOnly=!shared||guestUnavailable||(!uid&&!!local[channel.key]);
   const reaction=localOnly?local[channel.key]:channel.votes.get(uid);
   const {icon,label}=labels.get(reaction)||labels.get('like');
-  const counts=new Map();
-  const votes=shared?[...channel.votes.values()]:[];
-  if(localOnly&&reaction)votes.push(reaction);
-  for(const vote of votes)counts.set(vote,(counts.get(vote)||0)+1);
-  const icons=[...counts].sort((a,b)=>b[1]-a[1]).slice(0,3).map(([id])=>labels.get(id).icon).join('');
+  const countValue=(shared?channel.votes.size:0)+(localOnly&&reaction?1:0);
   for(const root of channel.roots){
     const button=root.querySelector('.photo-like');
     button.setAttribute('aria-pressed',String(!!reaction));
@@ -61,11 +57,8 @@ function refresh(channel){
     if(reaction)iconSlot.textContent=icon;
     else if(!iconSlot.querySelector('svg'))iconSlot.innerHTML=thumbOutline;
     const count=root.querySelector('.photo-reaction-count');
-    count.textContent=channel.mode==='loading'?'…':votes.length.toLocaleString('zh-TW');
+    count.textContent=channel.mode==='loading'?'…':countValue.toLocaleString('zh-TW');
     count.title=localOnly?(shared?'共用總數及此瀏覽器的表情':'此瀏覽器的表情數'):'所有訪客的表情數';
-    const summary=root.querySelector('.photo-reaction-summary');
-    summary.textContent=icons;
-    summary.title=[...counts].map(([id,value])=>labels.get(id).label+' '+value).join('、');
     const localLabel=root.querySelector('.photo-local-label');
     localLabel.textContent=shared?'含本機':'本機';
     localLabel.hidden=channel.mode==='loading'||!localOnly;
@@ -175,16 +168,37 @@ class PhotoReactionsBar extends HTMLElement{
       </button>
       <span class="photo-reaction-count" aria-label="表情數">…</span>
       <details class="photo-emoji">
-        <summary aria-label="選擇表情"><span aria-hidden="true">▾</span></summary>
+        <summary aria-label="選擇表情" title="愛心與其他表情"><span aria-hidden="true">☺ ▾</span></summary>
         <div class="photo-emoji-options" role="group" aria-label="照片表情">
           ${reactions.map(([id,icon,label])=>`<button type="button" data-reaction="${id}" aria-label="${label}" title="${label}" aria-pressed="false">${icon}</button>`).join('')}
         </div>
       </details>
       <span class="photo-local-label" hidden>本機</span>
-      <span class="photo-reaction-summary" aria-hidden="true"></span>
     </div><p class="photo-social-status" role="status"></p>`;
     const emojiMenu=this.querySelector('details');
-    this.querySelector('.photo-like').onclick=()=>react(this.channel,'like',true);
+    const controls=this.querySelector('.photo-reaction-controls');
+    const likeButton=this.querySelector('.photo-like');
+    let hoverOpened=false;
+    let dismissTimer;
+    likeButton.addEventListener('pointerenter',event=>{
+      if(event.pointerType!=='mouse'||emojiMenu.open)return;
+      hoverOpened=true;
+      emojiMenu.open=true;
+    });
+    controls.addEventListener('pointerenter',()=>clearTimeout(dismissTimer));
+    controls.addEventListener('pointerleave',event=>{
+      if(event.pointerType!=='mouse'||!hoverOpened)return;
+      dismissTimer=setTimeout(()=>{
+        if(!emojiMenu.matches(':focus-within'))emojiMenu.open=false;
+        hoverOpened=false;
+      },180);
+    });
+    emojiMenu.querySelector('summary').addEventListener('click',()=>{
+      if(!hoverOpened)return;
+      hoverOpened=false;
+      clearTimeout(dismissTimer);
+    });
+    likeButton.onclick=()=>react(this.channel,'like',true);
     this.querySelector('.photo-emoji-options').onclick=event=>{
       const button=event.target.closest('[data-reaction]');
       if(!button)return;

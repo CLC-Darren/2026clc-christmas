@@ -313,8 +313,7 @@ button.meals-cta{border:0;cursor:pointer;font-family:inherit}
 .photo-like[aria-pressed="true"]{background:#e8f0e8;color:#175e43}
 .photo-reaction-count{font-size:14px;font-variant-numeric:tabular-nums;color:#4a6657}
 .photo-local-label{font-size:11px;color:#65746c}
-.photo-reaction-summary{margin-inline-start:auto;font-size:14px;letter-spacing:-3px;padding-inline-end:3px}
-.photo-emoji summary{display:grid;place-items:center;width:30px;font-size:14px;list-style:none}
+.photo-emoji summary{display:grid;place-items:center;min-width:40px;padding-inline:5px;font-size:15px;list-style:none}
 .photo-emoji summary::-webkit-details-marker{display:none}
 .photo-emoji-options{position:absolute;z-index:5;inset-inline-start:0;bottom:calc(100% + 5px);display:flex;flex-wrap:wrap;gap:3px;width:max-content;max-width:100%;padding:5px;border:1px solid #dce7db;border-radius:14px;background:#fffefa;box-shadow:0 4px 14px #28433333}
 .photo-emoji-options button{display:grid;place-items:center;width:34px;height:36px;border:1px solid transparent;border-radius:9px;background:none;padding:0;font-size:21px;line-height:1}
