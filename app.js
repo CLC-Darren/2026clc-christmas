@@ -26,8 +26,9 @@ const fields={
   supplies:[['giftCount','預估禮物份數','number'],['giftStatus','小禮物準備狀態','select',['待確認','準備中','已完成']],['refreshmentStatus','點心／飲料狀態','select',['待確認','準備中','已完成']],['notes','補充說明','textarea']],
   session:[['leader','現場 Leader／配搭窗口','text'],['team','接待人力分配','text'],['people','預計同工人數','number'],['notes','待確認事項／備註','textarea']]
 };
-const state={db:null,auth:null,user:null,sections:new Map(),updates:new Map(),counts:new Map(),centralAssets:new Map(),current:null,sending:false};
-const admin=()=>!!state.user?.emailVerified&&superusers.includes((state.user.email||'').toLowerCase());
+const state={db:null,auth:null,authReady:false,authBusy:false,user:null,sections:new Map(),updates:new Map(),counts:new Map(),centralAssets:new Map(),current:null,sending:false};
+const isAdminUser=user=>!!user?.emailVerified&&superusers.includes((user.email||'').toLowerCase());
+const admin=()=>isAdminUser(state.user);
 const collectionRef=name=>collection(state.db,'christmas2026','main',name);
 const docRef=(name,id)=>doc(state.db,'christmas2026','main',name,id);
 const sortTime=r=>r?.submittedAt?.seconds??r?.createdAt?.seconds??0;
@@ -64,7 +65,12 @@ function renderRecent(){const latest=seed.map(s=>latestFor(s.id)).filter(Boolean
   $('logList').innerHTML=history.length?history.map(r=>`<div class="activity-item"><div><b>${esc(r.label)}</b><small>${esc(r.reporter||'未署名')} · ${esc(prettyTime(r.submittedAt||r.createdAt))}</small></div>${admin()?`<button type="button" class="admin-remove" data-delete-record="${esc(r.kind+'|'+r.id)}">刪除</button>`:''}</div>`).join(''):'<p class="empty">目前尚無提交紀錄。</p>';
   document.querySelectorAll('[data-delete-record]').forEach(b=>b.addEventListener('click',()=>{const [kind,id]=b.dataset.deleteRecord.split('|');kind==='count'?removeCount(id):removeUpdate(id)}));
 }
-function renderLogin(){const button=$('authButton');button.disabled=!configured;button.textContent=!configured?'待設定 Firebase':admin()?'管理者登出':'管理者登入';$('countSubmit').disabled=!configured;$('formRole').textContent='免登入 · 直接公開';$('originalFormLink').hidden=!admin();if(!configured)notice('目前尚未設定 Firebase，請先完成 firebase-config.js 與 Firestore Rules。',true);else notice('所有填報免登入，送出後立即公開；只有兩位管理者可修改中央提供或刪除資料。');renderSections();renderCounts();renderCentralAssets()}
+function renderAccountButton(){
+  const button=$('authButton');
+  button.disabled=!configured||!state.authReady||state.authBusy;
+  button.textContent=!configured?'待設定 Firebase':admin()?'管理者登出':'管理者登入';
+}
+function renderLogin(){renderAccountButton();$('countSubmit').disabled=!configured;$('formRole').textContent='免登入 · 直接公開';$('originalFormLink').hidden=!admin();if(!configured)notice('目前尚未設定 Firebase，請先完成 firebase-config.js 與 Firestore Rules。',true);else notice('所有填報免登入，送出後立即公開；只有兩位管理者可修改中央提供或刪除資料。');renderSections();renderCounts();renderCentralAssets()}
 function formField([name,label,type,options],value){const v=esc(value??'');if(type==='select')return `<label>${esc(label)}<select name="${name}">${options.map(s=>`<option ${s===String(value)?'selected':''}>${esc(s)}</option>`).join('')}</select></label>`;if(type==='textarea')return `<label class="full">${esc(label)}<textarea name="${name}" maxlength="1200">${v}</textarea></label>`;return `<label>${esc(label)}<input name="${name}" type="${type}" ${type==='number'?'min="0" max="5000" step="1"':'maxlength="250"'} value="${v}"></label>`}
 function readEditor(){const s=baseFor(state.current);if(!s)return null;const form=new FormData($('editForm'));const obj={};for(const [name] of fields[s.type])obj[name]=String(form.get(name)||'').trim();return obj}
 function saveLocal(){if(!state.current)return;try{localStorage.setItem(localPrefix+state.current,JSON.stringify({fields:readEditor(),reporter:$('editReporter').value.trim()}))}catch{}}
@@ -271,8 +277,51 @@ accountMenu.addEventListener('keydown',event=>{
 });
 setupForm();renderLogin();
 if(configured){const app=getApps()[0]||initializeApp(firebaseConfig);state.db=getFirestore(app);state.auth=getAuth(app);renderLogin();
-  $('authButton').addEventListener('click',async()=>{accountMenu.open=false;if(admin()){try{await signOut(state.auth)}catch(e){toast(safeMsg(e))}return}try{const credential=await signInWithPopup(state.auth,new GoogleAuthProvider());if(!superusers.includes((credential.user.email||'').toLowerCase())){toast('只有指定管理者可以登入管理功能；一般填報不需要登入。');await signOut(state.auth)}}catch(e){toast('管理者登入失敗：'+safeMsg(e))}});
-  onAuthStateChanged(state.auth,user=>{state.user=user;renderLogin()});
+  const authStatus=$('accountAuthStatus');
+  $('authButton').addEventListener('click',async()=>{
+    if(!state.authReady||state.authBusy)return;
+    const signingOut=admin();
+    state.authBusy=true;
+    renderAccountButton();
+    authStatus.textContent=signingOut?'正在登出…':'請在 Google 視窗選擇管理者帳號。';
+    try{
+      if(signingOut){
+        await signOut(state.auth);
+      }else{
+        const provider=new GoogleAuthProvider();
+        provider.setCustomParameters({prompt:'select_account'});
+        const {user}=await signInWithPopup(state.auth,provider);
+        if(!isAdminUser(user)){
+          await signOut(state.auth);
+          authStatus.textContent='請選用已驗證的管理者 Google 帳號。';
+          return;
+        }
+      }
+      authStatus.textContent='';
+      accountMenu.open=false;
+      accountMenu.querySelector('summary').focus();
+    }catch(error){
+      const messages={
+        'auth/popup-blocked':'登入視窗被封鎖。請允許彈出視窗，或用 Chrome／Safari 開啟本站再登入。',
+        'auth/popup-closed-by-user':'登入視窗已關閉。若你從 App 內開啟本站，請改用 Chrome 或 Safari 再登入。',
+        'auth/operation-not-supported-in-this-environment':'目前的瀏覽器無法開啟 Google 登入。請用 Chrome 或 Safari 開啟本站。',
+        'auth/web-storage-unsupported':'瀏覽器封鎖了登入所需的儲存空間。請用 Chrome 或 Safari 再試一次。',
+        'auth/unauthorized-domain':'這個網址尚未加入 Firebase Authentication 的授權網域。',
+        'auth/network-request-failed':'連不上 Google 登入服務。請確認網路後再試一次。'
+      };
+      authStatus.textContent=messages[error.code]||`${signingOut?'登出':'登入'}失敗（${safeMsg(error)}）。`;
+      accountMenu.open=true;
+    }finally{
+      state.authBusy=false;
+      renderAccountButton();
+    }
+  });
+  onAuthStateChanged(state.auth,user=>{
+    if(!state.authReady)authStatus.textContent='';
+    state.authReady=true;
+    state.user=user;
+    renderLogin();
+  });
   const sub=(name,handler)=>onSnapshot(collectionRef(name),snap=>handler(snap),error=>{console.error('Firestore listener',name,error);notice(`讀取 ${name} 失敗：${safeMsg(error)}。請核對 Firestore Database → Rules 已 Publish。`,true)});
   sub('sections',snap=>{state.sections=new Map(snap.docs.map(d=>[d.id,d.data()]));renderSections()});
   sub('publicUpdates',snap=>{state.updates=new Map(snap.docs.map(d=>[d.id,d.data()]));renderSections()});

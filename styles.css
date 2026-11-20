@@ -298,5 +298,5 @@ button.meals-cta{border:0;cursor:pointer;font-family:inherit}
 .account-switch input::before{content:"";width:18px;height:18px;border-radius:50%;background:white}
 .account-switch input:checked{justify-items:end;background:#086bb6}
 .account-switch input:disabled,.meal-card-review:disabled{opacity:.55;cursor:default}
-#mealAutoApproveStatus{padding:0 15px;margin:0 0 10px;font-size:13px;color:var(--muted)}
-#mealAutoApproveStatus:empty{display:none}
+.account-menu-status,#mealAutoApproveStatus{padding:0 15px;margin:0 0 10px;font-size:13px;color:var(--muted)}
+.account-menu-status:empty,#mealAutoApproveStatus:empty{display:none}

@@ -10,7 +10,7 @@
   <link rel="icon" href="assets/favicon-32.png?v=20261111" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261120-review-menu">
+  <link rel="stylesheet" href="styles.css?v=20261120-admin-login">
 </head>
 <body>
   <a class="skip-link" href="#overview">跳至主要內容</a>
@@ -27,7 +27,8 @@
       <details id="accountMenu" class="account-menu">
         <summary aria-label="帳號選單"><span aria-hidden="true"></span></summary>
         <div class="account-menu-panel">
-          <button id="authButton" type="button">管理者登入</button>
+          <button id="authButton" type="button" aria-describedby="accountAuthStatus" disabled>管理者登入</button>
+          <p id="accountAuthStatus" class="account-menu-status" role="status">正在載入登入功能…</p>
           <div id="mealReviewSettings" hidden>
             <label class="account-switch">自動審核餐點修改
               <input id="mealAutoApprove" type="checkbox" role="switch" aria-describedby="mealAutoApproveStatus" disabled>
@@ -228,7 +229,7 @@
   </dialog>
   <dialog id="installHelpDialog" class="install-help-dialog" aria-labelledby="installHelpTitle"><div class="install-help-header"><h2 id="installHelpTitle">建立桌面捷徑</h2><button id="installHelpClose" type="button" aria-label="關閉說明">×</button></div><p id="installHelpText"></p><button type="button" id="installHelpDone" class="primary-btn">知道了</button></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="app.js?v=20261120-review-menu"></script>
+  <script type="module" src="app.js?v=20261120-admin-login"></script>
   <script type="module" src="meal-public.js?v=20261120-review-menu"></script>
   <script defer src="modal-ui.js?v=20261111"></script>
   <script defer src="pwa.js?v=20261111-shortcut-v2"></script>
