@@ -1,4 +1,5 @@
 // 2026 CLC Christmas：所有表單免登入，新增即公開；只有兩位 Superuser 可刪除。
+import {renderPhotoSocial,sharedPhoto} from './photo-social.js?v=20261120-photo-social';
 import {firebaseConfig,superusers} from './firebase-config.js';
 const configured=!Object.values(firebaseConfig).some(v=>!v||String(v).includes('PASTE_'));
 const [appSDK,authSDK,dbSDK]=configured?await Promise.all([
@@ -129,6 +130,7 @@ function setupForm(){
 
 // Central supplies: independent photo documents allow albums without the Firestore 1 MiB document limit.
 // Previous one-photo records are read as legacy items so no existing uploads are lost.
+let centralShare=sharedPhoto('supply');
 const centralAssetIds=['sticker','voucher'];
 const MAX_CENTRAL_IMAGE_LENGTH=180000;
 const albumState={photos:new Map(),activeId:null,index:0,busy:new Set()};
@@ -147,6 +149,9 @@ function renderCentralAssets(){
   for(const id of centralAssetIds){
     const pictures=getAlbum(id),cover=pictures[0],count=pictures.length;
     const image=$('centralAssetImg-'+id),empty=$('centralAssetEmpty-'+id),open=$('centralAssetOpen-'+id);
+    renderPhotoSocial($('centralPhotoSocial-'+id),cover&&{
+      kind:'supply',album:id,position:cover.id,src:cover.imageData,title:$('centralAssetName-'+id).textContent
+    });
     if(cover)image.src=cover.imageData;else image.removeAttribute('src');
     image.hidden=!cover;empty.hidden=!!cover;open.disabled=!cover;
     open.classList.toggle('has-multiple',count>1);
@@ -158,6 +163,14 @@ function renderCentralAssets(){
     $('centralAssetDrop-'+id).classList.toggle('uploading',albumState.busy.has(id));
   }
   if(albumState.activeId)renderCentralGallery();
+  if(centralShare&&centralAssetIds.includes(centralShare.album)){
+    const index=getAlbum(centralShare.album).findIndex(photo=>photo.id===centralShare.photo);
+    if(index!==-1){
+      const {album}=centralShare;
+      centralShare=null;
+      openCentralGallery(album,index);
+    }
+  }
 }
 async function compressCentralAsset(file){
   if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('僅支援 JPG、PNG、WebP 照片');
@@ -213,6 +226,9 @@ function renderCentralGallery(){
   const photo=images[albumState.index];
   $('centralGalleryTitle').textContent=id==='sticker'?'聖誕季貼紙':'餐點兌換券';
   $('centralGalleryImage').src=photo.imageData;
+  renderPhotoSocial($('centralGallerySocial'),{
+    kind:'supply',album:id,position:photo.id,src:photo.imageData,title:$('centralGalleryTitle').textContent
+  });
   $('centralGalleryImage').alt=`${$('centralGalleryTitle').textContent}　第 ${albumState.index+1} 張`;
   $('centralGalleryPosition').textContent=`${albumState.index+1} / ${images.length}`;
   $('centralGalleryPrev').disabled=images.length<=1;
@@ -222,9 +238,9 @@ function renderCentralGallery(){
   for(const button of $('centralGalleryThumbs').querySelectorAll('[data-gallery-index]'))button.addEventListener('click',()=>{albumState.index=Number(button.dataset.galleryIndex);renderCentralGallery()});
   const active=$('centralGalleryThumbs').querySelector('.active');active?.scrollIntoView({block:'nearest',inline:'nearest'});
 }
-function openCentralGallery(id){
+function openCentralGallery(id,index=0){
   if(!getAlbum(id).length)return;
-  albumState.activeId=id;albumState.index=0;
+  albumState.activeId=id;albumState.index=index;
   const dlg=$('centralGalleryDialog');if(!dlg.open)dlg.showModal();renderCentralGallery();
 }
 function moveCentralGallery(delta){

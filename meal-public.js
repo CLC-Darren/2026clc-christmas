@@ -1,4 +1,5 @@
 // 2026 CLC Christmas — 分堂餐點：六張分類卡片／七個場次；首次公開，後續修改依設定審核。
+import {renderPhotoSocial,sharedPhoto} from './photo-social.js?v=20261120-photo-social';
 import {firebaseConfig,superusers} from './firebase-config.js';
 import {getApps,initializeApp} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js';
@@ -39,12 +40,16 @@ function maybeLoadLegacy(item){if(!state.db||!item?.legacy||state.legacyImages.h
  state.legacyImages.set(item.id,[]);
  getDocs(imgCol(item.id)).then(snap=>{state.legacyImages.set(item.id,snap.docs.map(x=>x.data()).filter(d=>isPhoto(d.imageData)).sort((a,b)=>a.position-b.position).map(d=>d.imageData));renderCards()}).catch(e=>console.warn('legacy meal photos',e));
 }
+let mealShare=sharedPhoto('meal');
+function mealPhoto(slot,position,src,title){
+ return {kind:'meal',album:slot,position:position+1,src,title};
+}
 function coverView(group,slot,item){const images=imagesFor(item),pos=state.positions.get(slot)||0,idx=pos%Math.max(images.length,1);
  if(!images.length)return `<button type="button" class="meal-card-empty" data-edit-slot="${slot}"><span>＋</span><strong>尚未填寫餐點</strong><small>點擊開始填寫</small></button>`;
  return `<div class="meal-card-photo-wrap ${images.length>1?'meal-photo-stack':''}">
  <button class="meal-card-cover" type="button" data-open-gallery="${slot}" aria-label="打開${escapeHTML(group.name)}餐點相簿"><img src="${escapeHTML(images[idx])}" alt="${escapeHTML(item.mealName)} 第 ${idx+1} 張照片"><span class="meal-card-photo-counter">${idx+1} / ${images.length}</span><span class="meal-card-photo-open">點開查看全部照片 ↗</span></button>
  ${images.length>1?`<button class="meal-card-arrow meal-card-arrow-prev" type="button" data-slide="${slot}" data-step="-1" aria-label="上一張">‹</button><button class="meal-card-arrow meal-card-arrow-next" type="button" data-slide="${slot}" data-step="1" aria-label="下一張">›</button>`:''}
- </div>`;
+ </div><div class="photo-social" data-meal-photo-social="${slot}" hidden></div>`;
 }
 function groupHTML(g){const slot=groupSlot(g),item=effective(slot),tabs=g.slots.length>1?`<div class="meal-card-tabs">${g.slots.map(s=>`<button type="button" data-select-slot="${s}" data-group="${g.id}" class="${s===slot?'active':''}">${escapeHTML(slotMeta[s][1])}${state.admin&&pendingFor(s).length?'<i class="meal-tab-dot" aria-label="待審核"></i>':''}</button>`).join('')}</div>`:'';
  const pendingCount=state.admin?pendingFor(slot).length:0;
@@ -52,13 +57,33 @@ function groupHTML(g){const slot=groupSlot(g),item=effective(slot),tabs=g.slots.
  <div class="meal-card-head"><div><small>BRANCH HOSPITALITY</small><h3>${escapeHTML(g.name)}</h3></div><span class="meal-card-badge ${item?'ready':'empty'}">${item?'已填寫':'待填寫'}</span></div>
  ${tabs}${coverView(g,slot,item)}
  <div class="meal-card-details">${item?`<h4>${escapeHTML(item.mealName)}</h4><div class="meal-card-prices"><span>每套 ${money(item.unitPrice)}</span><strong>總預算 ${money(item.totalBudget)}</strong></div>${item.note?`<p>${escapeHTML(item.note)}</p>`:''}`:'<p class="meal-card-placeholder">請點擊「填寫餐點」上傳圖片與預算。</p>'}</div>
- <div class="meal-card-footer"><button class="meal-card-edit" type="button" data-edit-slot="${slot}">${item?'編輯餐點':'＋ 填寫餐點'}</button>${state.admin?`<button type="button" class="meal-card-review" data-review-slot="${slot}"${pendingCount?'':' disabled'}>${pendingCount?'<span class="meal-review-dot"></span>':''} 審核${pendingCount?' '+pendingCount:''}</button>`:''}${state.admin&&item?`<button class="meal-card-delete" type="button" data-delete-slot="${slot}">刪除</button>`:''}${!state.admin&&item?`<span class="meal-card-note">${state.autoApprove?'修改直接公開':'後續修改需審核'}</span>`:''}</div>
+ <div class="meal-card-footer">
+  <div class="meal-card-edit-actions">
+   <button class="meal-card-edit" type="button" data-edit-slot="${slot}">${item?'編輯餐點':'＋ 填寫餐點'}</button>
+   ${state.admin&&item?`<button class="meal-card-delete" type="button" data-delete-slot="${slot}">刪除</button>`:''}
+  </div>
+  ${state.admin?`<button type="button" class="meal-card-review" data-review-slot="${slot}"${pendingCount?'':' disabled'}>${pendingCount?'<span class="meal-review-dot"></span>':''} 審核${pendingCount?' '+pendingCount:''}</button>`:''}
+  ${!state.admin&&item?`<span class="meal-card-note">${state.autoApprove?'修改直接公開':'後續修改需審核'}</span>`:''}
+ </div>
  </article>`;
 }
 let suppressGalleryClickUntil=0;
 function slide(slot,step){const images=imagesFor(effective(slot));if(images.length<2)return;state.positions.set(slot,((state.positions.get(slot)||0)+step+images.length)%images.length);renderCards()}
 function renderCards(){const root=$('featuredMeals');if(!root)return;root.innerHTML=groups.map(groupHTML).join('');
  
+ root.querySelectorAll('[data-meal-photo-social]').forEach(element=>{
+  const slot=element.dataset.mealPhotoSocial,item=effective(slot),images=imagesFor(item);
+  const position=(state.positions.get(slot)||0)%images.length;
+  renderPhotoSocial(element,mealPhoto(slot,position,images[position],item.mealName));
+ });
+ if(mealShare){
+  const {album,photo}=mealShare;
+  const position=Number(photo)-1;
+  if(Number.isInteger(position)&&position>=0&&imagesFor(effective(album)).length>position){
+   mealShare=null;
+   openGallery(album,position);
+  }
+ }
  root.querySelectorAll('[data-select-slot]').forEach(b=>b.addEventListener('click',()=>{state.activeTabs.set(b.dataset.group,b.dataset.selectSlot);renderCards()}));
  root.querySelectorAll('[data-edit-slot]').forEach(b=>b.addEventListener('click',()=>openEditor(b.dataset.editSlot)));
  root.querySelectorAll('[data-slide]').forEach(b=>b.addEventListener('click',()=>slide(b.dataset.slide,Number(b.dataset.step))));
@@ -242,7 +267,7 @@ form.addEventListener('submit',async e=>{e.preventDefault();if(state.busy||state
 });
 $('mealDialogClose').addEventListener('click',()=>dialog.close());
 function showToast(msg){const t=$('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),5200)}
-async function openGallery(slot){const item=effective(slot);if(!item)return;state.gallerySlot=slot;state.selectedGallery=imagesFor(item);state.galleryIndex=state.positions.get(slot)||0;
+async function openGallery(slot,index=state.positions.get(slot)||0){const item=effective(slot);if(!item)return;state.gallerySlot=slot;state.selectedGallery=imagesFor(item);state.galleryIndex=index;
  $('mealGalleryTitle').textContent=slotMeta[slot].join('／')+' · '+item.mealName;
  drawGallery();if(!gallery.open)gallery.showModal();
  if(item.legacy&&Number(item.photoCount||1)>1&&state.selectedGallery.length<Number(item.photoCount||1)){
@@ -253,6 +278,7 @@ async function openGallery(slot){const item=effective(slot);if(!item)return;stat
  }
 }
 function drawGallery(){const imgs=state.selectedGallery;if(!imgs.length)return;state.galleryIndex=state.galleryIndex%imgs.length;
+ renderPhotoSocial($('mealGallerySocial'),mealPhoto(state.gallerySlot,state.galleryIndex,imgs[state.galleryIndex],$('mealGalleryTitle').textContent));
  $('mealGalleryImage').src=imgs[state.galleryIndex];$('mealGalleryPosition').textContent=`${state.galleryIndex+1} / ${imgs.length}`;
  $('mealGalleryLoading').textContent=imgs.length>1?'可左右滑動，或點選下方縮圖':'';
  $('mealGalleryPrev').hidden=imgs.length<=1;$('mealGalleryNext').hidden=imgs.length<=1;
