@@ -71,9 +71,9 @@ function renderCards(){const root=$('featuredMeals');if(!root)return;root.innerH
  root.querySelectorAll('[data-delete-slot]').forEach(b=>b.addEventListener('click',()=>deleteEntry(b.dataset.deleteSlot)));
 }
 async function resizeImage(source,maxChars){let image;
- if(source instanceof File){if(!['image/jpeg','image/png','image/webp'].includes(source.type))throw Error('請選 JPG、PNG 或 WebP 圖片');if(source.size>12*1024*1024)throw Error('單張原始照片不可超過 12 MB')}
+ if(source instanceof File&&source.size>12*1024*1024)throw Error('單張原始照片不可超過 12 MB');
  const url=source instanceof File?URL.createObjectURL(source):source;
- try{image=await new Promise((ok,bad)=>{const img=new Image();img.onload=()=>ok(img);img.onerror=()=>bad(Error('照片讀取失敗'));img.src=url});
+ try{image=await new Promise((ok,bad)=>{const img=new Image();img.onload=()=>ok(img);img.onerror=()=>bad(Error('無法讀取這個照片格式，請改選 JPG、PNG 或 WebP'));img.src=url});
  let side=920,quality=.78;
  for(let i=0;i<20;i++){
   const scale=Math.min(1,side/Math.max(image.naturalWidth,image.naturalHeight)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
@@ -90,11 +90,44 @@ function renderPreviews(){const box=$('mealPhotoPreviews');box.innerHTML=state.i
  $('mealPhotoHint').textContent=`已選 ${state.images.length} / ${MAX_PHOTOS} 張 · 支援多選與拖曳`;
  box.querySelectorAll('[data-remove-photo]').forEach(b=>b.addEventListener('click',()=>{state.images.splice(Number(b.dataset.removePhoto),1);renderPreviews();saveDraft()}));
 }
-async function addFiles(files){if(state.processing)return;const chosen=[...files].filter(f=>f instanceof File);
- if(!chosen.length)return;if(state.images.length+chosen.length>MAX_PHOTOS){shortStatus(`最多 ${MAX_PHOTOS} 張照片，目前已選 ${state.images.length} 張。`,true);return}
- state.processing=true;$('submitPublicMeals').disabled=true;
- try{for(let i=0;i<chosen.length;i++){shortStatus(`正在加入照片 ${i+1} / ${chosen.length} …`);state.images.push(await resizeImage(chosen[i],95000));renderPreviews()}
- shortStatus(`已加入 ${chosen.length} 張照片。`);saveDraft()}catch(e){shortStatus(e.message,true)}finally{state.processing=false;$('submitPublicMeals').disabled=false}
+function photoStatus(message,error=false){
+ const status=$('mealPhotoStatus');
+ status.textContent=message;
+ status.classList.toggle('error',error);
+}
+async function addFiles(files){
+ if(state.processing||state.busy||!files.length)return;
+ const images=state.images;
+ if(images.length+files.length>MAX_PHOTOS){
+  photoStatus(`最多 ${MAX_PHOTOS} 張照片，目前已選 ${images.length} 張。`,true);
+  return;
+ }
+ state.processing=true;
+ photoInput.disabled=true;
+ $('submitPublicMeals').disabled=true;
+ let added=0;
+ const failures=[];
+ try{
+  for(const [index,file] of files.entries()){
+   if(!dialog.open||state.images!==images)return;
+   photoStatus(`正在處理照片 ${index+1} / ${files.length} …`);
+   try{
+    const photo=await resizeImage(file,95000);
+    if(!dialog.open||state.images!==images)return;
+    if(images.length>=MAX_PHOTOS)throw Error(`最多 ${MAX_PHOTOS} 張照片。`);
+    images.push(photo);
+    added++;
+    renderPreviews();
+   }catch(error){failures.push(`第 ${index+1} 張：${error.message}`)}
+  }
+  if(!dialog.open||state.images!==images)return;
+  photoStatus([added?`已加入 ${added} 張照片，送出後才會上傳。`:'',...failures].filter(Boolean).join('；'),failures.length>0);
+  saveDraft();
+ }finally{
+  state.processing=false;
+  photoInput.disabled=false;
+  $('submitPublicMeals').disabled=state.busy;
+ }
 }
 const draftKey=id=>'clc_meal_slot_draft_v1_'+id;
 function saveDraft(){if(!state.currentSlot||!dialog.open)return;const obj={mealName:$('mealName').value,unitPrice:$('mealUnit').value,totalBudget:$('mealBudget').value,note:$('mealNote').value,reporter:$('mealReporter').value};
@@ -106,19 +139,36 @@ async function openEditor(slot){if(!slotMeta[slot])return;state.currentSlot=slot
  $('mealSelectedService').textContent=slotMeta[slot].join('／');$('mealSubmissionMode').textContent=existing?'修改須審核':'首次填寫 · 立即公開';
  $('mealDialogSubtitle').textContent=existing?'送出後不會直接覆蓋，需管理者確認才會更新首頁。':'第一次提交不需登入，送出後會直接公開。';
  $('mealReporterWrap').hidden=!existing;$('submitPublicMeals').textContent=existing?'送出修改申請':'送出並公開';
- form.reset();const d=readDraft(slot)||{};
+ form.reset();photoStatus('');const d=readDraft(slot)||{};
  $('mealName').value=d.mealName??existing?.mealName??'';$('mealUnit').value=d.unitPrice??existing?.unitPrice??'';
  $('mealBudget').value=d.totalBudget??existing?.totalBudget??'';$('mealNote').value=d.note??existing?.note??'';$('mealReporter').value=d.reporter||'';
- state.images=imagesFor(existing);if(existing?.legacy){maybeLoadLegacy(existing)}renderPreviews();shortStatus(existing?'請確認內容，送出後將進入待審核，不會立即更改公開資料。':'首次填寫送出後會直接公開。');
+ const editorImages=imagesFor(existing);
+ const initialPhotoCount=editorImages.length;
+ state.images=editorImages;
+ renderPreviews();
+ shortStatus(existing?'請確認內容，送出後將進入待審核，不會立即更改公開資料。':'首次填寫送出後會直接公開。');
  if(!dialog.open)dialog.showModal();
- if(existing?.legacy&&Number(existing.photoCount||1)>1){try{const snap=await getDocs(imgCol(existing.id));if(state.currentSlot!==slot||!dialog.open)return;state.legacyImages.set(existing.id,snap.docs.map(d=>d.data()).filter(d=>isPhoto(d.imageData)).sort((a,b)=>a.position-b.position).map(d=>d.imageData));state.images=imagesFor(existing);renderPreviews()}catch(e){console.warn('existing meal images',e)}}
+ if(existing?.legacy&&initialPhotoCount<Math.min(MAX_PHOTOS,Number(existing.photoCount||1))){
+  try{
+   const snap=await getDocs(imgCol(existing.id));
+   if(state.images!==editorImages||!dialog.open)return;
+   const photos=snap.docs.map(d=>d.data()).filter(d=>isPhoto(d.imageData)).sort((a,b)=>a.position-b.position);
+   state.legacyImages.set(existing.id,photos.map(d=>d.imageData));
+   const remaining=imagesFor(existing).slice(initialPhotoCount);
+   editorImages.splice(initialPhotoCount,0,...remaining.slice(0,MAX_PHOTOS-editorImages.length));
+   renderPreviews();
+  }catch(error){console.warn('existing meal images',error)}
+ }
 }
 const dropZone=$('mealUploadZone'),photoInput=$('mealPhotoInput');
-dropZone.addEventListener('click',()=>photoInput.click());dropZone.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();photoInput.click()}});
-photoInput.addEventListener('change',async()=>{const files=[...photoInput.files];photoInput.value='';await addFiles(files)});
+photoInput.addEventListener('change',async()=>{
+ const files=Array.from(photoInput.files);
+ await addFiles(files);
+ photoInput.value='';
+});
 ['dragenter','dragover'].forEach(type=>dropZone.addEventListener(type,e=>{e.preventDefault();dropZone.classList.add('drag-over')}));
 ['dragleave','drop'].forEach(type=>dropZone.addEventListener(type,e=>{e.preventDefault();dropZone.classList.remove('drag-over')}));
-dropZone.addEventListener('drop',e=>addFiles(e.dataTransfer?.files||[]));
+dropZone.addEventListener('drop',e=>addFiles(Array.from(e.dataTransfer?.files||[])));
 form.addEventListener('input',saveDraft);
 function readForm(){if(!state.currentSlot)throw Error('請先選擇分堂場次');const mealName=$('mealName').value.trim(),unitPrice=Number($('mealUnit').value),totalBudget=Number($('mealBudget').value),note=$('mealNote').value.trim();
  if(!mealName)throw Error('請填寫餐點名稱');if($('mealUnit').value===''||$('mealBudget').value==='')throw Error('請填寫每套單價與總預算');

@@ -52,10 +52,12 @@ function renderSections(){for(const id of ['centralCards','honghuiCards'])$(id).
 function renderCounts(){const reports=[...state.counts.entries()].map(([id,v])=>({...v,id})).sort((a,b)=>sortTime(b)-sortTime(a));const total=reports.reduce((n,r)=>n+Math.max(0,Number(r.count)||0),0);
   $('totalPeople').textContent=total.toLocaleString('zh-TW');$('countReportTotal').textContent=`${total.toLocaleString('zh-TW')} 人`;
   $('heroPeople').textContent=total.toLocaleString('zh-TW');
-  $('heroCountMeta').textContent=reports.length?`最近回報：${reports[0].branch} · ${reports[0]['service']} · ${prettyTime(reports[0].createdAt)}`:'尚無回報資料，歡迎提交第一筆新人統計';
+  $('heroCountMeta').hidden=!reports.length;
+  $('heroCountMeta').textContent=reports.length?`最近回報：${reports[0].branch} · ${reports[0]['service']} · ${prettyTime(reports[0].createdAt)}`:'';
   const groups=['江翠','新莊','林口','宏匯聖誕'];
   $('heroCountBreakdown').innerHTML=groups.map(branch=>`<span><b>${esc(branch)}</b> ${reports.filter(r=>r.branch===branch).reduce((sum,r)=>sum+Math.max(0,Number(r.count)||0),0).toLocaleString('zh-TW')}</span>`).join('');
-  $('countRows').innerHTML=reports.length?reports.slice(0,30).map(r=>`<div class="count-row"><div>${esc(r.branch)} · ${esc(r.date)}<small>${esc(r['service'])} · ${esc(r.reporter||'未署名')} · 已公開</small></div><strong>${Math.max(0,Number(r.count)||0)} 人${admin()?` <button type="button" class="count-delete" data-delete-count="${esc(r.id)}" title="管理者刪除此筆">×</button>`:''}</strong></div>`).join(''):'<p class="muted">尚無回報資料。</p>';
+  $('countRows').hidden=!reports.length;
+  $('countRows').innerHTML=reports.slice(0,30).map(r=>`<div class="count-row"><div>${esc(r.branch)} · ${esc(r.date)}<small>${esc(r['service'])} · ${esc(r.reporter||'未署名')} · 已公開</small></div><strong>${Math.max(0,Number(r.count)||0)} 人${admin()?` <button type="button" class="count-delete" data-delete-count="${esc(r.id)}" title="管理者刪除此筆">×</button>`:''}</strong></div>`).join('');
   document.querySelectorAll('[data-delete-count]').forEach(b=>b.addEventListener('click',()=>removeCount(b.dataset.deleteCount)));renderRecent()}
 function renderRecent(){const latest=seed.map(s=>latestFor(s.id)).filter(Boolean).sort((a,b)=>sortTime(b)-sortTime(a));$('pendingList').innerHTML=latest.length?latest.map(r=>`<div class="activity-item"><div><b>${esc(baseFor(r.sectionId)?.title||r.sectionId)}</b><small>${esc(r.reporter||'未署名')} · ${esc(prettyTime(r.submittedAt))} · 已公開</small></div></div>`).join(''):'<p class="empty">目前尚無工作項目更新。</p>';
   const history=[...sortedUpdates().map(r=>({...r,kind:'update',label:baseFor(r.sectionId)?.title||r.sectionId})),...[...state.counts.entries()].map(([id,r])=>({...r,id,kind:'count',label:`${r.branch||''} · ${r.date||''} · ${r.count||0} 人`}))].sort((a,b)=>sortTime(b)-sortTime(a)).slice(0,30);

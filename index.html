@@ -10,7 +10,7 @@
   <link rel="icon" href="assets/favicon-32.png?v=20261111" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261120-gallery-layout">
+  <link rel="stylesheet" href="styles.css?v=20261120-mobile-photos">
 </head>
 <body>
   <a class="skip-link" href="#overview">跳至主要內容</a>
@@ -33,12 +33,11 @@
       <div class="container hero-content">
         <div class="eyebrow"><span class="eyebrow-rule"></span> 2026 CLC SPECIAL CHRISTMAS</div>
         <h1>THE WAY<span class="hero-subtitle">CLC 特別聖誕季 新人接待</span></h1>
-        <p class="hero-verse">「我就是道路、真理、生命；若不藉著我，沒有人能到父那裡去。」<br><span>約翰福音 14:6</span></p>
         <div class="hero-live-panel" aria-label="聖誕季即時新人回報">
           <div class="hero-live-figure">
             <div class="hero-live-label"><span class="hero-live-dot" aria-hidden="true"></span> NEW FRIENDS · 即時統計</div>
             <div class="hero-live-total"><strong id="heroPeople" aria-live="polite">—</strong><span>位已回報新朋友</span></div>
-            <p class="hero-live-meta" id="heroCountMeta">數字與各場回報同步更新</p>
+            <p class="hero-live-meta" id="heroCountMeta" hidden></p>
             <div class="hero-live-branches" id="heroCountBreakdown" aria-label="各分堂回報統計"></div>
           </div>
           <div class="hero-quick-actions">
@@ -127,11 +126,11 @@
     </section>
     <section id="attendees" class="count-section section-pad">
       <div class="container">
-        <div class="section-heading"><div><span class="kicker">NEW FRIENDS</span><h2>新人人數明細</h2><p>回報送出後，首頁主視覺與此處數字即時同步。</p></div><button id="openCountFromSection" class="meals-cta" type="button">＋ 回報人數 ↗</button></div>
+        <div class="section-heading"><div><span class="kicker">NEW FRIENDS</span><h2>新人人數明細</h2></div><button id="openCountFromSection" class="meals-cta" type="button">＋ 回報人數 ↗</button></div>
         <div class="count-layout count-layout-summary">
           <div class="count-summary">
             <div class="summary-head"><span>REPORT OVERVIEW</span><b id="countReportTotal">0 人</b></div>
-            <div id="countRows" class="count-rows"><p class="muted">尚無回報資料。</p></div>
+            <div id="countRows" class="count-rows" hidden></div>
             <p class="summary-note">請勿在備註欄填入新朋友姓名、電話、住址等個人資料。本表只統計數量。</p>
           </div>
         </div>
@@ -151,7 +150,8 @@
         <div class="meal-selected-service"><strong id="mealSelectedService">江翠／主日</strong><span id="mealSubmissionMode">首次填寫</span></div>
         <div class="meal-entry-fields">
           <div class="meal-picture">
-            <div id="mealUploadZone" class="meal-upload-zone" role="button" tabindex="0" aria-label="點選或拖曳加入餐點照片"><input id="mealPhotoInput" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden><span class="meal-picture-placeholder">＋ 點選或拖曳照片</span><small id="mealPhotoHint" class="meal-photo-hint">一次可選多張，最多 20 張</small></div>
+            <div id="mealUploadZone" class="meal-upload-zone"><input id="mealPhotoInput" type="file" accept="image/*" multiple aria-label="選擇餐點照片" aria-describedby="mealPhotoHint mealPhotoStatus"><span class="meal-picture-placeholder">＋ 點選或拖曳照片</span><small id="mealPhotoHint" class="meal-photo-hint">一次可選多張，最多 20 張</small></div>
+            <p class="meal-form-message" id="mealPhotoStatus" role="status"></p>
             <div id="mealPhotoPreviews" class="meal-photo-preview-grid" aria-label="餐點照片預覽"></div>
           </div>
           <div class="meal-entry-inputs">
@@ -217,8 +217,8 @@
   </dialog>
   <dialog id="installHelpDialog" class="install-help-dialog" aria-labelledby="installHelpTitle"><div class="install-help-header"><h2 id="installHelpTitle">建立桌面捷徑</h2><button id="installHelpClose" type="button" aria-label="關閉說明">×</button></div><p id="installHelpText"></p><button type="button" id="installHelpDone" class="primary-btn">知道了</button></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="app.js?v=20261111-modals"></script>
-  <script type="module" src="meal-public.js?v=20261111-category-review-v1"></script>
+  <script type="module" src="app.js?v=20261120-mobile-photos"></script>
+  <script type="module" src="meal-public.js?v=20261120-mobile-photos"></script>
   <script defer src="modal-ui.js?v=20261111"></script>
   <script defer src="pwa.js?v=20261111-shortcut-v2"></script>
   <script defer src="https://clc-dx04.pages.dev/lf-back.js?v=8" data-home="https://clc-dx04.pages.dev/lf/" data-key="linfamily_homebtn_christmas"></script>
