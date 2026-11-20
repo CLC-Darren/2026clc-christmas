@@ -1,8 +1,8 @@
-// 2026 CLC Christmas — 分堂餐點：六張分類卡片／七個場次；首次公開，後續修改先審核。
+// 2026 CLC Christmas — 分堂餐點：六張分類卡片／七個場次；首次公開，後續修改依設定審核。
 import {firebaseConfig,superusers} from './firebase-config.js';
 import {getApps,initializeApp} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js';
-import {getFirestore,collection,doc,onSnapshot,getDocs,getDocsFromServer,setDoc,addDoc,writeBatch,serverTimestamp,deleteDoc} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js';
+import {getFirestore,collection,doc,onSnapshot,getDocs,getDocsFromServer,setDoc,addDoc,writeBatch,runTransaction,serverTimestamp,deleteDoc} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js';
 const $=id=>document.getElementById(id);
 const escapeHTML=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const slotMeta={
@@ -21,10 +21,11 @@ const groups=[
 const MAX_PHOTOS=20, MAX_TOTAL_CHARS=760000;
 const isPhoto=x=>typeof x==='string'&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(x)&&x.length<=140000;
 const money=n=>'NT$ '+Number(n||0).toLocaleString('zh-TW');
-const state={db:null,admin:false,user:null,slots:new Map(),legacy:new Map(),legacyAll:new Map(),legacyImages:new Map(),requests:new Map(),activeTabs:new Map(),positions:new Map(),pendingUnsub:null,currentSlot:null,editing:false,images:[],processing:false,selectedGallery:[],galleryIndex:0,gallerySlot:null,busy:false,reviewSlot:null};
+const state={db:null,admin:false,user:null,slots:new Map(),legacy:new Map(),legacyAll:new Map(),legacyImages:new Map(),requests:new Map(),activeTabs:new Map(),positions:new Map(),pendingUnsub:null,currentSlot:null,editing:false,images:[],processing:false,selectedGallery:[],galleryIndex:0,gallerySlot:null,busy:false,reviewSlot:null,autoApprove:false,settingsReady:false,settingsSaving:false,settingsError:false};
 const form=$('publicMealForm'),dialog=$('mealDialog'),gallery=$('mealGalleryDialog'),reviewDialog=$('mealReviewDialog');
 const imgCol=id=>collection(state.db,'christmas2026','main','publicMeals',id,'photos');
 const slotRef=id=>doc(state.db,'christmas2026','main','mealSlots',id);
+const settingsRef=()=>doc(state.db,'christmas2026','main','mealSettings','review');
 const requestRef=id=>doc(state.db,'christmas2026','main','mealChangeRequests',id);
 function shortStatus(s,error=false){const el=$('publicMealMessage');el.textContent=s;el.classList.toggle('error',error)}
 function getSlotId(branch,service){if(branch==='江翠'&&(service==='青崇'||service==='晚崇'))service='青、晚崇';return Object.keys(slotMeta).find(id=>slotMeta[id][0]===branch&&slotMeta[id][1]===service)||null}
@@ -46,12 +47,12 @@ function coverView(group,slot,item){const images=imagesFor(item),pos=state.posit
  </div>`;
 }
 function groupHTML(g){const slot=groupSlot(g),item=effective(slot),tabs=g.slots.length>1?`<div class="meal-card-tabs">${g.slots.map(s=>`<button type="button" data-select-slot="${s}" data-group="${g.id}" class="${s===slot?'active':''}">${escapeHTML(slotMeta[s][1])}${state.admin&&pendingFor(s).length?'<i class="meal-tab-dot" aria-label="待審核"></i>':''}</button>`).join('')}</div>`:'';
- const pend=pendingFor(slot),total=[...g.slots].reduce((n,k)=>n+pendingFor(k).length,0),reviewTarget=pend.length?slot:(g.slots.find(k=>pendingFor(k).length)||slot);
+ const pendingCount=state.admin?pendingFor(slot).length:0;
  return `<article class="public-meal-card meal-category-card" data-category="${g.id}">
  <div class="meal-card-head"><div><small>BRANCH HOSPITALITY</small><h3>${escapeHTML(g.name)}</h3></div><span class="meal-card-badge ${item?'ready':'empty'}">${item?'已填寫':'待填寫'}</span></div>
  ${tabs}${coverView(g,slot,item)}
  <div class="meal-card-details">${item?`<h4>${escapeHTML(item.mealName)}</h4><div class="meal-card-prices"><span>每套 ${money(item.unitPrice)}</span><strong>總預算 ${money(item.totalBudget)}</strong></div>${item.note?`<p>${escapeHTML(item.note)}</p>`:''}`:'<p class="meal-card-placeholder">請點擊「填寫餐點」上傳圖片與預算。</p>'}</div>
- <div class="meal-card-footer"><button class="meal-card-edit" type="button" data-edit-slot="${slot}">${item?'編輯餐點':'＋ 填寫餐點'}</button>${state.admin&&total?`<button type="button" class="meal-card-review" data-review-slot="${reviewTarget}" aria-label="有 ${total} 筆待審核，點擊審核"><span class="meal-review-dot"></span> 待審核 ${total}</button>`:''}${state.admin&&item?`<button class="meal-card-delete" type="button" data-delete-slot="${slot}">刪除</button>`:''}${!state.admin&&item?'<span class="meal-card-note">後續修改需審核</span>':''}</div>
+ <div class="meal-card-footer"><button class="meal-card-edit" type="button" data-edit-slot="${slot}">${item?'編輯餐點':'＋ 填寫餐點'}</button>${state.admin?`<button type="button" class="meal-card-review" data-review-slot="${slot}"${pendingCount?'':' disabled'}>${pendingCount?'<span class="meal-review-dot"></span>':''} 審核${pendingCount?' '+pendingCount:''}</button>`:''}${state.admin&&item?`<button class="meal-card-delete" type="button" data-delete-slot="${slot}">刪除</button>`:''}${!state.admin&&item?`<span class="meal-card-note">${state.autoApprove?'修改直接公開':'後續修改需審核'}</span>`:''}</div>
  </article>`;
 }
 let suppressGalleryClickUntil=0;
@@ -162,11 +163,17 @@ function saveDraft(){if(!state.currentSlot||!dialog.open)return;const obj={mealN
  try{localStorage.setItem(draftKey(state.currentSlot),JSON.stringify(obj))}catch{}}
 function readDraft(id){try{return JSON.parse(localStorage.getItem(draftKey(id))||'null')}catch{return null}}
 function clearDraft(id){try{localStorage.removeItem(draftKey(id))}catch{}}
+function renderEditorMode(){
+ const manual=state.editing&&!state.autoApprove;
+ $('mealSubmissionMode').textContent=manual?'修改須審核':'立即公開';
+ $('mealDialogSubtitle').textContent=manual?'管理者核准後會更新首頁。':'免登入，送出後直接公開。';
+ $('mealReporterWrap').hidden=!manual;
+ $('submitPublicMeals').textContent=manual?'送出修改申請':'送出並公開';
+}
 async function openEditor(slot){if(!slotMeta[slot])return;state.currentSlot=slot;const existing=effective(slot);state.editing=!!existing;
  $('mealDialogTitle').textContent=`${slotMeta[slot].join('／')}｜${existing?'修改餐點':'首次填寫'}`;
- $('mealSelectedService').textContent=slotMeta[slot].join('／');$('mealSubmissionMode').textContent=existing?'修改須審核':'首次填寫 · 立即公開';
- $('mealDialogSubtitle').textContent=existing?'送出後不會直接覆蓋，需管理者確認才會更新首頁。':'第一次提交不需登入，送出後會直接公開。';
- $('mealReporterWrap').hidden=!existing;$('submitPublicMeals').textContent=existing?'送出修改申請':'送出並公開';
+ $('mealSelectedService').textContent=slotMeta[slot].join('／');
+ renderEditorMode();
  form.reset();photoStatus('');const d=readDraft(slot)||{};
  $('mealName').value=d.mealName??existing?.mealName??'';$('mealUnit').value=d.unitPrice??existing?.unitPrice??'';
  $('mealBudget').value=d.totalBudget??existing?.totalBudget??'';$('mealNote').value=d.note??existing?.note??'';$('mealReporter').value=d.reporter||'';
@@ -174,7 +181,7 @@ async function openEditor(slot){if(!slotMeta[slot])return;state.currentSlot=slot
  const initialPhotoCount=editorImages.length;
  state.images=editorImages;
  renderPreviews();
- shortStatus(existing?'請確認內容，送出後將進入待審核，不會立即更改公開資料。':'首次填寫送出後會直接公開。');
+ shortStatus('');
  if(!dialog.open)dialog.showModal();
  if(existing?.legacy&&initialPhotoCount<Math.min(MAX_PHOTOS,Number(existing.photoCount||1))){
   try{
@@ -208,12 +215,29 @@ function readForm(){if(!state.currentSlot)throw Error('請先選擇分堂場次'
  if(!state.images.length)throw Error('請至少上傳一張餐點照片');return {mealName,unitPrice,totalBudget,note};
 }
 async function notifyRevision(id){try{const response=await fetch('/api/meal-review-notify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});if(!response.ok)return false;return !!(await response.json()).sent}catch(e){console.warn('mail notification not delivered',e);return false}}
+async function submitRevision(slot,data){
+ const change={...data,slotId:slot,reporter:$('mealReporter').value.trim(),status:'pending',submittedAt:serverTimestamp()};
+ const requests=collection(state.db,'christmas2026','main','mealChangeRequests');
+ if(state.settingsError)return (await addDoc(requests,change)).id;
+ const proposal=doc(requests);
+ const meal=slotRef(slot);
+ return runTransaction(state.db,async transaction=>{
+  const settings=await transaction.get(settingsRef());
+  if(settings.data()?.autoApprove!==true){
+   transaction.set(proposal,change);
+   return proposal.id;
+  }
+  const current=await transaction.get(meal);
+  transaction.set(meal,{...data,createdAt:current.data()?.createdAt??serverTimestamp(),updatedAt:serverTimestamp()});
+  return null;
+ });
+}
 form.addEventListener('submit',async e=>{e.preventDefault();if(state.busy||state.processing||!state.db)return;let record;try{record=readForm()}catch(err){shortStatus(err.message,true);return}
  const slot=state.currentSlot,existing=effective(slot);state.busy=true;$('submitPublicMeals').disabled=true;
  try{shortStatus('正在壓縮照片並送出…');const images=await prepareImageList();const data={...record,imageData:images[0],images};
  if(!existing){try{await setDoc(slotRef(slot),{...data,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});shortStatus('首次餐點已直接公開！');clearDraft(slot);dialog.close();renderCards()}
   catch(e){if(e.code==='permission-denied'){shortStatus('這個場次剛剛已有其他人完成首次填寫，請關閉後重新開啟修改；資料未被覆蓋。',true)}else throw e} }
- else{const proposal=await addDoc(collection(state.db,'christmas2026','main','mealChangeRequests'),{...data,slotId:slot,reporter:$('mealReporter').value.trim(),status:'pending',submittedAt:serverTimestamp()});clearDraft(slot);dialog.close();const sent=await notifyRevision(proposal.id);shortStatus(sent?'修改已提交待管理者審核，通知郵件已寄出。':'修改已提交待管理者審核；通知郵件尚未成功寄送，請告知管理者登入網站查看。',!sent);showToast(sent?'修改申請已提交，已通知管理者。':'修改申請已保存，請提醒管理者查看紅點。')}
+ else{const proposalId=await submitRevision(slot,data);clearDraft(slot);dialog.close();if(!proposalId){showToast('餐點修改已公開。');return}const sent=await notifyRevision(proposalId);shortStatus(sent?'修改已提交待管理者審核，通知郵件已寄出。':'修改已提交待管理者審核；通知郵件尚未成功寄送，請告知管理者登入網站查看。',!sent);showToast(sent?'修改申請已提交，已通知管理者。':'修改申請已保存，請提醒管理者查看紅點。')}
  }catch(err){console.error('meal save error',err);shortStatus('送出失敗：'+(err.code||err.message||'請稍後再試'),true)}finally{state.busy=false;$('submitPublicMeals').disabled=false}
 });
 $('mealDialogClose').addEventListener('click',()=>dialog.close());
@@ -255,10 +279,9 @@ async function deleteEntry(slot){
  finally{state.busy=false}
 }
 // 原卡片右下角紅點審核；只在 Superuser 登入時顯示。
-function reviewItemsFor(slot){return state.reviewSlot==='ALL'?[...state.requests.values()].filter(r=>r.status==='pending'):[...state.requests.values()].filter(r=>r.slotId===slot&&r.status==='pending')}
-function openReview(slot){if(!state.admin)return;state.reviewSlot=slot;
- $('mealReviewTitle').textContent=slot==='ALL'?'待審核的餐點修改':slotMeta[slot].join('／')+'｜待審核';drawReview();if(!reviewDialog.open)reviewDialog.showModal();}
-function drawReview(){const list=reviewItemsFor(state.reviewSlot).sort((a,b)=>(a.submittedAt?.seconds||0)-(b.submittedAt?.seconds||0));
+function openReview(slot){if(!state.admin||!slotMeta[slot])return;state.reviewSlot=slot;
+ $('mealReviewTitle').textContent=slotMeta[slot].join('／')+'｜待審核';drawReview();if(!reviewDialog.open)reviewDialog.showModal();}
+function drawReview(){const list=pendingFor(state.reviewSlot);
  const root=$('mealReviewList');if(!list.length){root.innerHTML='<p class="meal-review-empty">目前沒有待審核的修改。</p>';return}
  root.innerHTML=list.map(p=>{const old=effective(p.slotId);const changed=[['餐點名稱',old?.mealName,p.mealName],['每套單價',old?.unitPrice,p.unitPrice],['總預算',old?.totalBudget,p.totalBudget],['備註',old?.note,p.note],['照片張數',imagesFor(old).length,p.images?.length||0]];
  const diff=changed.filter(([k,a,b])=>String(a??'')!==String(b??'')).map(([k,a,b])=>`<div class="meal-review-diff"><b>${k}</b><span>${escapeHTML(a??'未填')}</span><strong>→ ${escapeHTML(b??'無')}</strong></div>`).join('')||'<p>資料內容未改動，請確認照片是否有變更。</p>';
@@ -267,7 +290,7 @@ function drawReview(){const list=reviewItemsFor(state.reviewSlot).sort((a,b)=>(a
  root.querySelectorAll('[data-reject]').forEach(b=>b.addEventListener('click',()=>decide(b.dataset.reject,false)));
 }
 async function decide(id,approve){if(!state.admin||!state.db||state.busy)return;const p=state.requests.get(id);if(!p||p.status!=='pending')return;
- if(!confirm(approve?'確定核准這份修改，直接更新首頁？':'確定退回這份修改？'))return;
+ if(!approve&&!confirm('確定退回這份修改？'))return;
  state.busy=true;
  try{const batch=writeBatch(state.db);if(approve){const existing=state.slots.get(p.slotId);const docData={mealName:p.mealName,unitPrice:p.unitPrice,totalBudget:p.totalBudget,note:p.note,imageData:p.imageData,images:p.images,createdAt:existing?.createdAt||serverTimestamp(),updatedAt:serverTimestamp(),lastApprovedBy:state.user.email};batch.set(slotRef(p.slotId),docData)}
  batch.update(requestRef(id),{status:approve?'approved':'rejected',reviewedAt:serverTimestamp(),reviewedBy:state.user.email});await batch.commit();showToast(approve?'已核准，首頁資料正在更新。':'已退回修改申請。')}
@@ -276,8 +299,46 @@ async function decide(id,approve){if(!state.admin||!state.db||state.busy)return;
 }
 $('mealReviewClose').addEventListener('click',()=>reviewDialog.close());
 function autoOpenMailReview(){const id=new URLSearchParams(location.search).get('review');if(!id||!state.admin)return;const p=state.requests.get(id);if(!p)return;openReview(p.slotId);history.replaceState(null,'',location.pathname+location.hash)}
+const autoApproveSwitch=$('mealAutoApprove');
+function renderReviewSettings(){
+ $('mealReviewSettings').hidden=!state.admin;
+ autoApproveSwitch.checked=state.autoApprove;
+ autoApproveSwitch.disabled=!state.admin||!state.settingsReady||state.settingsSaving;
+ $('mealAutoApproveStatus').textContent=state.settingsError?'目前無法讀取自動審核設定。':state.settingsSaving?'儲存中…':'';
+}
+autoApproveSwitch.addEventListener('change',async()=>{
+ if(!state.admin||!state.settingsReady||state.settingsSaving)return;
+ const enabled=autoApproveSwitch.checked;
+ state.settingsSaving=true;
+ renderReviewSettings();
+ try{
+  await setDoc(settingsRef(),{autoApprove:enabled});
+ }catch(error){
+  console.error('meal review settings',error);
+  showToast('自動審核設定儲存失敗，請再試一次。');
+ }finally{
+  state.settingsSaving=false;
+  renderReviewSettings();
+ }
+});
 const configured=!Object.values(firebaseConfig).some(x=>!x||String(x).includes('PASTE_'));
 if(configured){const app=getApps()[0]||initializeApp(firebaseConfig);state.db=getFirestore(app);
+ onSnapshot(settingsRef(),snapshot=>{
+  state.autoApprove=snapshot.data()?.autoApprove===true;
+  state.settingsReady=true;
+  state.settingsError=false;
+  renderReviewSettings();
+  renderCards();
+  if(dialog.open)renderEditorMode();
+ },error=>{
+  console.error('meal review settings',error);
+  state.autoApprove=false;
+  state.settingsReady=false;
+  state.settingsError=true;
+  renderReviewSettings();
+  renderCards();
+  if(dialog.open)renderEditorMode();
+ });
  onSnapshot(collection(state.db,'christmas2026','main','mealSlots'),snap=>{state.slots=new Map(snap.docs.map(d=>[d.id,{...d.data(),id:d.id}]));renderCards()},e=>console.error('mealSlots',e));
  onSnapshot(collection(state.db,'christmas2026','main','publicMeals'),snap=>{const fresh=new Map();
   const all=new Map();
@@ -287,11 +348,11 @@ if(configured){const app=getApps()[0]||initializeApp(firebaseConfig);state.db=ge
   state.legacy=fresh;state.legacyAll=all;for(const item of fresh.values())maybeLoadLegacy(item);renderCards()
  },e=>console.error('legacy publicMeals',e));
  onAuthStateChanged(getAuth(app),user=>{state.user=user;state.admin=!!(user?.emailVerified&&superusers.some(s=>s===user.email?.toLowerCase()));
-  state.pendingUnsub?.();state.pendingUnsub=null;state.requests.clear();renderCards();
+  state.pendingUnsub?.();state.pendingUnsub=null;state.requests.clear();if(!state.admin&&reviewDialog.open)reviewDialog.close();renderReviewSettings();renderCards();
   if(state.admin){state.pendingUnsub=onSnapshot(collection(state.db,'christmas2026','main','mealChangeRequests'),snap=>{
    state.requests=new Map(snap.docs.map(d=>[d.id,{...d.data(),id:d.id}]));renderCards();if(reviewDialog.open)drawReview();autoOpenMailReview()
   },e=>console.error('mealChangeRequests read',e))}
-  else if(new URLSearchParams(location.search).has('review')){showToast('請先按右上角「管理者登入」，登入後即可審核此修改申請。')}
+  else if(new URLSearchParams(location.search).has('review')){showToast('請在右上角選單登入管理者帳號後審核。')}
  });
 }else{$('featuredMeals').innerHTML='<p class="meal-empty">Firebase 尚未設定，請確認 firebase-config.js。</p>'}
 renderCards();

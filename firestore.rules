@@ -160,7 +160,8 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
     // 七個固定場次，每個 slot 只可有一筆正式餐點。
-    // 第一次建立不要求登入；之後只允許驗證後的 Superuser 更新。
+    // mealSettings/review contains the public autoApprove boolean (default off).
+    // Verified admins control this setting. Meal records retain their original createdAt.
     function validMealSlot() {
       let d = request.resource.data;
       return d.keys().hasAll(['mealName','unitPrice','totalBudget','note','imageData','images','createdAt','updatedAt'])
@@ -177,6 +178,18 @@ service cloud.firestore {
     function validMealSlotId(slotId) {
       return slotId.matches('^(jiangcui-sunday|jiangcui-youth|jiangcui-evening|xinzhuang-sunday|xinzhuang-youth|linkou-sunday|linkou-youth)$');
     }
+    function validMealReviewSettings() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['autoApprove']) && d.autoApprove is bool;
+    }
+    function mealAutoApprovalEnabled() {
+      let settings = /databases/$(database)/documents/christmas2026/main/mealSettings/review;
+      return exists(settings) && get(settings).data.autoApprove == true;
+    }
+    match /christmas2026/main/mealSettings/review {
+      allow get: if true;
+      allow create, update: if isAdmin() && validMealReviewSettings();
+    }
     match /christmas2026/main/mealSlots/{slotId} {
       allow get,list: if true;
       allow create: if validMealSlotId(slotId) && validMealSlot() && (
@@ -186,10 +199,18 @@ service cloud.firestore {
           && !request.resource.data.keys().hasAny(['lastApprovedBy'])
         )
       );
-      allow update: if isAdmin() && validMealSlot();
+      allow update: if validMealSlot() && (
+        isAdmin() || (
+          validMealSlotId(slotId)
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.updatedAt == request.time
+          && !request.resource.data.keys().hasAny(['lastApprovedBy'])
+          && mealAutoApprovalEnabled()
+        )
+      );
       allow delete: if isAdmin();
     }
-    // 認證以外的所有訪客只可建立待審核版本，不能直接覆蓋正式內容。
+    // 手動審核模式使用待審核版本。
     function validMealChange() {
       let d = request.resource.data;
       return d.keys().hasAll(['slotId','mealName','unitPrice','totalBudget','note','imageData','images','reporter','status','submittedAt'])

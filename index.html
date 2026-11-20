@@ -10,7 +10,7 @@
   <link rel="icon" href="assets/favicon-32.png?v=20261111" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261120-mobile-photos">
+  <link rel="stylesheet" href="styles.css?v=20261120-review-menu">
 </head>
 <body>
   <a class="skip-link" href="#overview">跳至主要內容</a>
@@ -24,7 +24,18 @@
     </nav>
     <div class="header-actions">
       <button id="installAppButton" class="install-app-button" type="button" aria-label="建立桌面捷徑">＋ 建立桌面捷徑</button>
-      <button id="authButton" class="auth-button" type="button">登入管理</button>
+      <details id="accountMenu" class="account-menu">
+        <summary aria-label="帳號選單"><span aria-hidden="true"></span></summary>
+        <div class="account-menu-panel">
+          <button id="authButton" type="button">管理者登入</button>
+          <div id="mealReviewSettings" hidden>
+            <label class="account-switch">自動審核餐點修改
+              <input id="mealAutoApprove" type="checkbox" role="switch" aria-describedby="mealAutoApproveStatus" disabled>
+            </label>
+            <p id="mealAutoApproveStatus" role="status"></p>
+          </div>
+        </div>
+      </details>
     </div>
   </header>
   <main id="overview">
@@ -63,7 +74,7 @@
     </section>
     <section id="meals-showcase" class="container meals-showcase" aria-label="已提交餐點">
       <div class="section-heading"><div><span class="kicker">CHRISTMAS HOSPITALITY</span><h2>各分堂餐點提案</h2><p class="showcase-count">請點選自己的分堂與聚會卡片填寫或提出修改</p></div></div>
-      <div id="meals" class="meal-category-help">每場只保留一份正式餐點提案；首次填寫直接公開，之後修改需管理者確認。照片可直接在卡片上左右滑動，點擊照片則會開啟完整相簿。</div><div id="featuredMeals" class="public-meal-grid meal-category-grid" aria-live="polite"><p class="meal-empty">正在讀取餐點提案...</p></div>
+      <div id="meals" class="meal-category-help">每場保留一份正式餐點提案。點擊照片可開啟相簿。</div><div id="featuredMeals" class="public-meal-grid meal-category-grid" aria-live="polite"><p class="meal-empty">正在讀取餐點提案...</p></div>
       <div id="central" class="block-heading central-under-meals"><div><span class="kicker">01 / CENTRAL</span><h3>中央統一提供</h3></div><p>聖誕季餐點兌換券、聖誕季貼紙</p></div>
       <div class="central-layout">
         <div id="centralCards" class="items-grid"></div>
@@ -118,7 +129,7 @@
       </div>
     </section>
     <section id="workstreams" class="section-pad container">
-      <div class="section-heading"><div><span class="kicker">WORKSTREAMS</span><h2>工作進度與資料</h2></div><p>分堂餐點首次填寫直接公開，後續修改要經管理者確認；新人數與宏匯填報仍免登入。</p></div>
+      <div class="section-heading"><div><span class="kicker">WORKSTREAMS</span><h2>工作進度與資料</h2></div><p>新人數與宏匯填報免登入。</p></div>
       <div class="deadline-banner"><span class="deadline-icon">◎</span><div><b>11/20（五）餐點提交截止</b><span>請各分堂點擊自己的分類卡片，填入餐點、照片、單價與預計總預算。</span></div><a href="#meals">查看餐點規劃 ↗</a></div>
       <div class="tip">江翠週六參考預算 <b>NT$ 8,000</b>、主日 <b>NT$ 12,000</b>。Life Cafe 已提供甜、鹹與咖啡；各分堂仍須向主任牧師核定預算。</div>
       <div id="honghui" class="block-heading"><div><span class="kicker">03 / HONGHUI</span><h3>宏匯聖誕接待</h3></div><p>12/19–12/20，共四場；中央準備小禮物、點心和飲料。</p></div>
@@ -137,14 +148,14 @@
       </div>
     </section>
     <section id="activity" class="container section-pad">
-      <div class="section-heading"><div><span class="kicker">LATEST UPDATES</span><h2>最新填報與提交紀錄</h2></div><p>所有提交立即顯示，不需審核。管理者可刪除錯誤資料。</p></div>
+      <div class="section-heading"><div><span class="kicker">LATEST UPDATES</span><h2>最新填報與提交紀錄</h2></div><p>管理者可刪除錯誤資料。</p></div>
       <div class="activity-grid"><div><h3 class="small-title">各工作項目最新填報</h3><div id="pendingList" class="activity-list"></div></div><div><h3 class="small-title">最近提交紀錄</h3><div id="logList" class="activity-list"></div></div></div>
     </section>
   </main>
   <nav class="mobile-nav" aria-label="手機快速導覽"><a href="#timeline">四週行程</a><a href="#workstreams">工作進度</a><a href="#attendees">新人回報</a><a href="#activity">提交紀錄</a></nav>
   <footer class="footer"><div class="container footer-inner"><div class="footer-name">THE WAY <span>2026 CHRISTMAS</span></div><div>CHANGE LIFE CHURCH · CLC PROJECT CENTER</div><a href="#overview">回到最上方 ↑</a></div></footer>
   <dialog id="mealDialog" class="submission-dialog meal-submission-dialog" aria-labelledby="mealDialogTitle">
-    <div class="submission-dialog-head"><div><span class="kicker">CHRISTMAS HOSPITALITY</span><h2 id="mealDialogTitle">分堂餐點提案</h2><p id="mealDialogSubtitle">首次提交直接顯示；之後的修改須管理者審核</p></div><button id="mealDialogClose" class="submission-dialog-close" type="button" aria-label="關閉餐點填寫視窗">×</button></div>
+    <div class="submission-dialog-head"><div><span class="kicker">CHRISTMAS HOSPITALITY</span><h2 id="mealDialogTitle">分堂餐點提案</h2><p id="mealDialogSubtitle">首次填寫直接公開</p></div><button id="mealDialogClose" class="submission-dialog-close" type="button" aria-label="關閉餐點填寫視窗">×</button></div>
     <div class="submission-dialog-body">
       <form id="publicMealForm" class="meal-public-form" novalidate>
         <div class="meal-selected-service"><strong id="mealSelectedService">江翠／主日</strong><span id="mealSubmissionMode">首次填寫</span></div>
@@ -217,8 +228,8 @@
   </dialog>
   <dialog id="installHelpDialog" class="install-help-dialog" aria-labelledby="installHelpTitle"><div class="install-help-header"><h2 id="installHelpTitle">建立桌面捷徑</h2><button id="installHelpClose" type="button" aria-label="關閉說明">×</button></div><p id="installHelpText"></p><button type="button" id="installHelpDone" class="primary-btn">知道了</button></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="app.js?v=20261120-mobile-photos"></script>
-  <script type="module" src="meal-public.js?v=20261120-android-screenshots"></script>
+  <script type="module" src="app.js?v=20261120-review-menu"></script>
+  <script type="module" src="meal-public.js?v=20261120-review-menu"></script>
   <script defer src="modal-ui.js?v=20261111"></script>
   <script defer src="pwa.js?v=20261111-shortcut-v2"></script>
   <script defer src="https://clc-dx04.pages.dev/lf-back.js?v=8" data-home="https://clc-dx04.pages.dev/lf/" data-key="linfamily_homebtn_christmas"></script>
