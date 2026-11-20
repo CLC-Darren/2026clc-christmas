@@ -1,5 +1,5 @@
 // 2026 CLC Christmas — 分堂餐點：六張分類卡片／七個場次；首次公開，後續修改依設定審核。
-import {renderPhotoSocial,sharedPhoto} from './photo-social.js?v=20261120-photo-social';
+import {renderPhotoSocial,sharedPhoto} from './photo-social.js?v=20261120-photo-reactions';
 import {firebaseConfig,superusers} from './firebase-config.js';
 import {getApps,initializeApp} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js';
@@ -41,15 +41,15 @@ function maybeLoadLegacy(item){if(!state.db||!item?.legacy||state.legacyImages.h
  getDocs(imgCol(item.id)).then(snap=>{state.legacyImages.set(item.id,snap.docs.map(x=>x.data()).filter(d=>isPhoto(d.imageData)).sort((a,b)=>a.position-b.position).map(d=>d.imageData));renderCards()}).catch(e=>console.warn('legacy meal photos',e));
 }
 let mealShare=sharedPhoto('meal');
-function mealPhoto(slot,position,src,title){
- return {kind:'meal',album:slot,position:position+1,src,title};
+function mealPhoto(slot,src){
+ return {kind:'meal',album:slot,src};
 }
 function coverView(group,slot,item){const images=imagesFor(item),pos=state.positions.get(slot)||0,idx=pos%Math.max(images.length,1);
  if(!images.length)return `<button type="button" class="meal-card-empty" data-edit-slot="${slot}"><span>＋</span><strong>尚未填寫餐點</strong><small>點擊開始填寫</small></button>`;
  return `<div class="meal-card-photo-wrap ${images.length>1?'meal-photo-stack':''}">
  <button class="meal-card-cover" type="button" data-open-gallery="${slot}" aria-label="打開${escapeHTML(group.name)}餐點相簿"><img src="${escapeHTML(images[idx])}" alt="${escapeHTML(item.mealName)} 第 ${idx+1} 張照片"><span class="meal-card-photo-counter">${idx+1} / ${images.length}</span><span class="meal-card-photo-open">點開查看全部照片 ↗</span></button>
  ${images.length>1?`<button class="meal-card-arrow meal-card-arrow-prev" type="button" data-slide="${slot}" data-step="-1" aria-label="上一張">‹</button><button class="meal-card-arrow meal-card-arrow-next" type="button" data-slide="${slot}" data-step="1" aria-label="下一張">›</button>`:''}
- </div><div class="photo-social" data-meal-photo-social="${slot}" hidden></div>`;
+ </div><photo-reactions-bar class="photo-social" data-meal-photo-social="${slot}" hidden></photo-reactions-bar>`;
 }
 function groupHTML(g){const slot=groupSlot(g),item=effective(slot),tabs=g.slots.length>1?`<div class="meal-card-tabs">${g.slots.map(s=>`<button type="button" data-select-slot="${s}" data-group="${g.id}" class="${s===slot?'active':''}">${escapeHTML(slotMeta[s][1])}${state.admin&&pendingFor(s).length?'<i class="meal-tab-dot" aria-label="待審核"></i>':''}</button>`).join('')}</div>`:'';
  const pendingCount=state.admin?pendingFor(slot).length:0;
@@ -74,7 +74,7 @@ function renderCards(){const root=$('featuredMeals');if(!root)return;root.innerH
  root.querySelectorAll('[data-meal-photo-social]').forEach(element=>{
   const slot=element.dataset.mealPhotoSocial,item=effective(slot),images=imagesFor(item);
   const position=(state.positions.get(slot)||0)%images.length;
-  renderPhotoSocial(element,mealPhoto(slot,position,images[position],item.mealName));
+  renderPhotoSocial(element,mealPhoto(slot,images[position]));
  });
  if(mealShare){
   const {album,photo}=mealShare;
@@ -278,7 +278,7 @@ async function openGallery(slot,index=state.positions.get(slot)||0){const item=e
  }
 }
 function drawGallery(){const imgs=state.selectedGallery;if(!imgs.length)return;state.galleryIndex=state.galleryIndex%imgs.length;
- renderPhotoSocial($('mealGallerySocial'),mealPhoto(state.gallerySlot,state.galleryIndex,imgs[state.galleryIndex],$('mealGalleryTitle').textContent));
+ renderPhotoSocial($('mealGallerySocial'),mealPhoto(state.gallerySlot,imgs[state.galleryIndex]));
  $('mealGalleryImage').src=imgs[state.galleryIndex];$('mealGalleryPosition').textContent=`${state.galleryIndex+1} / ${imgs.length}`;
  $('mealGalleryLoading').textContent=imgs.length>1?'可左右滑動，或點選下方縮圖':'';
  $('mealGalleryPrev').hidden=imgs.length<=1;$('mealGalleryNext').hidden=imgs.length<=1;

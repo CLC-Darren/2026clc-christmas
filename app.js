@@ -1,5 +1,5 @@
 // 2026 CLC Christmas：所有表單免登入，新增即公開；只有兩位 Superuser 可刪除。
-import {renderPhotoSocial,sharedPhoto} from './photo-social.js?v=20261120-photo-social';
+import {renderPhotoSocial,sharedPhoto} from './photo-social.js?v=20261120-photo-reactions';
 import {firebaseConfig,superusers} from './firebase-config.js';
 const configured=!Object.values(firebaseConfig).some(v=>!v||String(v).includes('PASTE_'));
 const [appSDK,authSDK,dbSDK]=configured?await Promise.all([
@@ -150,7 +150,7 @@ function renderCentralAssets(){
     const pictures=getAlbum(id),cover=pictures[0],count=pictures.length;
     const image=$('centralAssetImg-'+id),empty=$('centralAssetEmpty-'+id),open=$('centralAssetOpen-'+id);
     renderPhotoSocial($('centralPhotoSocial-'+id),cover&&{
-      kind:'supply',album:id,position:cover.id,src:cover.imageData,title:$('centralAssetName-'+id).textContent
+      kind:'supply',album:id,src:cover.imageData
     });
     if(cover)image.src=cover.imageData;else image.removeAttribute('src');
     image.hidden=!cover;empty.hidden=!!cover;open.disabled=!cover;
@@ -227,7 +227,7 @@ function renderCentralGallery(){
   $('centralGalleryTitle').textContent=id==='sticker'?'聖誕季貼紙':'餐點兌換券';
   $('centralGalleryImage').src=photo.imageData;
   renderPhotoSocial($('centralGallerySocial'),{
-    kind:'supply',album:id,position:photo.id,src:photo.imageData,title:$('centralGalleryTitle').textContent
+    kind:'supply',album:id,src:photo.imageData
   });
   $('centralGalleryImage').alt=`${$('centralGalleryTitle').textContent}　第 ${albumState.index+1} 張`;
   $('centralGalleryPosition').textContent=`${albumState.index+1} / ${images.length}`;

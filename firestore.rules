@@ -226,6 +226,26 @@ service cloud.firestore {
         && d.images[0] == d.imageData
         && d.status == 'pending' && d.submittedAt == request.time;
     }
+    // Public reaction counts are derived from votes keyed by anonymous Firebase UID.
+    match /christmas2026/main/photoReactions/{photoId}/votes/{voterId} {
+      function validPhotoId() {
+        return photoId.matches('^(meal:(jiangcui-sunday|jiangcui-youth|jiangcui-evening|xinzhuang-sunday|xinzhuang-youth|linkou-sunday|linkou-youth)|supply:(sticker|voucher)):[0-9]{1,6}:[a-z0-9]{1,7}$');
+      }
+      function ownsVote() {
+        return request.auth != null
+          && request.auth.uid == voterId
+          && request.auth.token.firebase.sign_in_provider == 'anonymous';
+      }
+      function validVote() {
+        let vote = request.resource.data;
+        return vote.keys().hasOnly(['kind'])
+          && vote.kind in ['like','love','care','laugh','wow','sad','angry'];
+      }
+      allow get, list: if validPhotoId();
+      allow create, update: if validPhotoId() && ownsVote() && validVote();
+      allow delete: if validPhotoId() && ownsVote();
+    }
+
     match /christmas2026/main/mealChangeRequests/{changeId} {
       // 只有持有單筆亂數 ID 者能查看單筆修改；管理者才可列出全部。
       // 此單筆讀取也供 Cloudflare Pages Function 寄送摘要時查證真實資料。

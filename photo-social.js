@@ -1,125 +1,199 @@
+import {firebaseConfig} from './firebase-config.js';
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js';
+import {getAuth,signInAnonymously} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js';
+import {getFirestore,collection,doc,onSnapshot,setDoc,deleteDoc} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js';
+
 const reactions=[
   ['like','👍','讚'],['love','❤️','好愛'],['care','🥰','抱抱'],
   ['laugh','😆','哈'],['wow','😮','哇'],['sad','😢','難過'],['angry','😡','生氣']
 ];
+const labels=new Map(reactions.map(([id,icon,label])=>[id,{icon,label}]));
 const storageKey='clc-photo-reactions-v1';
-let choices={};
-try{choices=JSON.parse(localStorage.getItem(storageKey))||{}}catch{}
-const mounted=new WeakMap();
+let local={};
+try{local=JSON.parse(localStorage.getItem(storageKey))||{}}catch{}
+const channels=new Map();
+let services;
+let guestSignIn;
+
+function firebase(){
+  if(!services){
+    const app=initializeApp(firebaseConfig,'photo-reactions');
+    services={db:getFirestore(app),auth:getAuth(app)};
+    services.auth.onAuthStateChanged(()=>channels.forEach(refresh));
+  }
+  return services;
+}
+
+async function guest(){
+  const {auth}=firebase();
+  await auth.authStateReady();
+  if(auth.currentUser)return auth.currentUser;
+  guestSignIn??=signInAnonymously(auth).then(result=>result.user).finally(()=>{guestSignIn=null});
+  return guestSignIn;
+}
 
 function photoKey(album,src){
-  // Scope the reaction to the image content, even when its position in the album changes.
   let hash=2166136261;
   for(let i=0;i<src.length;i++)hash=Math.imul(hash^src.charCodeAt(i),16777619);
   return album+':'+src.length+':'+(hash>>>0).toString(36);
 }
 
-function refresh(root){
-  const current=choices[root.dataset.photoKey];
-  const alternate=reactions.find(([id])=>id===current&&id!=='like');
-  const trigger=root.querySelector('.photo-emoji summary');
-  trigger.querySelector('span').textContent=alternate?.[1]||'☺';
-  trigger.dataset.selected=String(!!alternate);
-  root.querySelectorAll('[data-reaction]').forEach(button=>{
-    button.setAttribute('aria-pressed',String(button.dataset.reaction===current));
+function refresh(channel){
+  const uid=services?.auth.currentUser?.uid;
+  const reaction=channel.mode==='shared'?channel.votes.get(uid):local[channel.key];
+  const {icon,label}=labels.get(reaction)||labels.get('like');
+  const counts=new Map();
+  const votes=channel.mode==='shared'?[...channel.votes.values()]:reaction?[reaction]:[];
+  for(const vote of votes)counts.set(vote,(counts.get(vote)||0)+1);
+  const icons=[...counts].sort((a,b)=>b[1]-a[1]).slice(0,3).map(([id])=>labels.get(id).icon).join('');
+  const localOnly=channel.mode==='local';
+  for(const root of channel.roots){
+    const button=root.querySelector('.photo-like');
+    button.setAttribute('aria-pressed',String(!!reaction));
+    button.disabled=channel.busy||channel.mode==='loading';
+    button.querySelector('.photo-like-icon').textContent=icon;
+    button.querySelector('.photo-like-label').textContent=label;
+    const count=root.querySelector('.photo-reaction-count');
+    count.textContent=channel.mode==='loading'?'…':votes.length.toLocaleString('zh-TW');
+    count.title=localOnly?'此瀏覽器的表情數':'所有訪客的表情數';
+    const summary=root.querySelector('.photo-reaction-summary');
+    summary.textContent=icons;
+    summary.title=[...counts].map(([id,value])=>labels.get(id).label+' '+value).join('、');
+    root.querySelector('.photo-local-label').hidden=!localOnly;
+    root.querySelectorAll('[data-reaction]').forEach(option=>{
+      option.disabled=channel.busy||channel.mode==='loading';
+      option.setAttribute('aria-pressed',String(option.dataset.reaction===reaction));
+    });
+  }
+}
+
+function subscribe(key,root){
+  let channel=channels.get(key);
+  if(!channel){
+    channel={key,roots:new Set(),votes:new Map(),mode:'loading',busy:false,stop:null};
+    channels.set(key,channel);
+    const {db}=firebase();
+    const ref=collection(db,'christmas2026','main','photoReactions',key,'votes');
+    channel.ref=ref;
+    channel.stop=onSnapshot(ref,snapshot=>{
+      channel.mode='shared';
+      channel.votes=new Map(snapshot.docs.map(record=>[record.id,record.data().kind]).filter(([,kind])=>labels.has(kind)));
+      refresh(channel);
+    },()=>{
+      channel.mode='local';
+      refresh(channel);
+    });
+  }
+  channel.roots.add(root);
+  refresh(channel);
+  return channel;
+}
+
+function unsubscribe(channel,root){
+  if(!channel)return;
+  channel.roots.delete(root);
+  queueMicrotask(()=>{
+    if(channel.roots.size||channels.get(channel.key)!==channel)return;
+    channel.stop?.();
+    channels.delete(channel.key);
   });
 }
+
+function changeLocal(channel,kind,toggle){
+  if(toggle&&local[channel.key])delete local[channel.key];
+  else if(local[channel.key]===kind)delete local[channel.key];
+  else local[channel.key]=kind;
+  try{localStorage.setItem(storageKey,JSON.stringify(local))}catch{}
+  channel.mode='local';
+}
+
+async function react(channel,kind,toggle=false){
+  if(!channel||channel.busy||channel.mode==='loading')return;
+  if(channel.mode==='local'){
+    changeLocal(channel,kind,toggle);
+    refresh(channel);
+    return;
+  }
+  channel.busy=true;
+  refresh(channel);
+  try{
+    const user=await guest();
+    const previous=channel.votes.get(user.uid);
+    const vote=doc(channel.ref,user.uid);
+    if(previous&&(toggle||previous===kind))await deleteDoc(vote);
+    else await setDoc(vote,{kind});
+  }catch(error){
+    const message=error.code==='auth/operation-not-allowed'
+      ?'共用表情尚未啟用訪客登入。':'表情未更新，請再試一次。';
+    channel.roots.forEach(root=>{root.querySelector('[role="status"]').textContent=message});
+  }finally{
+    channel.busy=false;
+    refresh(channel);
+  }
+}
+
+class PhotoReactionsBar extends HTMLElement{
+  connectedCallback(){
+    if(this.key&&!this.channel)this.channel=subscribe(this.key,this);
+  }
+  disconnectedCallback(){
+    unsubscribe(this.channel,this);
+    this.channel=null;
+  }
+  setPhoto(key){
+    if(this.key===key)return;
+    this.disconnectedCallback();
+    this.key=key;
+    this.hidden=!key;
+    this.replaceChildren();
+    if(!key)return;
+    this.innerHTML=`<div class="photo-reaction-controls">
+      <button type="button" class="photo-like" aria-pressed="false">
+        <span class="photo-like-icon" aria-hidden="true">👍</span><span class="photo-like-label">讚</span>
+      </button>
+      <span class="photo-reaction-count" aria-label="表情數">…</span>
+      <details class="photo-emoji">
+        <summary aria-label="選擇表情"><span aria-hidden="true">▾</span></summary>
+        <div class="photo-emoji-options" role="group" aria-label="照片表情">
+          ${reactions.map(([id,icon,label])=>`<button type="button" data-reaction="${id}" aria-label="${label}" title="${label}" aria-pressed="false">${icon}</button>`).join('')}
+        </div>
+      </details>
+      <span class="photo-local-label" hidden>本機</span>
+      <span class="photo-reaction-summary" aria-hidden="true"></span>
+    </div><p class="photo-social-status" role="status"></p>`;
+    const emojiMenu=this.querySelector('details');
+    this.querySelector('.photo-like').onclick=()=>react(this.channel,'like',true);
+    this.querySelector('.photo-emoji-options').onclick=event=>{
+      const button=event.target.closest('[data-reaction]');
+      if(!button)return;
+      emojiMenu.open=false;
+      emojiMenu.querySelector('summary').focus();
+      react(this.channel,button.dataset.reaction);
+    };
+    emojiMenu.addEventListener('keydown',event=>{
+      if(event.key==='Escape'&&emojiMenu.open){
+        event.stopPropagation();
+        event.preventDefault();
+        emojiMenu.open=false;
+        emojiMenu.querySelector('summary').focus();
+      }
+    });
+    if(this.isConnected)this.connectedCallback();
+  }
+}
+customElements.define('photo-reactions-bar',PhotoReactionsBar);
 
 export function sharedPhoto(kind){
   const [type,album,photo]=new URLSearchParams(location.search).get('photo')?.split(':')||[];
   return type===kind&&album&&photo?{album,photo}:null;
 }
 
-function reactionButton([id,emoji,label]){
-  return `<button type="button" data-reaction="${id}" aria-label="${label}" title="${label}" aria-pressed="false"><span aria-hidden="true">${emoji}</span></button>`;
-}
-
 export function renderPhotoSocial(root,photo){
-  root.hidden=!photo;
-  if(!photo){
-    root.replaceChildren();
-    delete root.dataset.photoKey;
-    mounted.delete(root);
-    return;
-  }
-  const {kind,album,position,src,title}=photo;
-  const key=photoKey(kind+':'+album,src);
-  const url=new URL(location.pathname,location.origin);
-  url.searchParams.set('photo',[kind,album,position].join(':'));
-  const shareUrl=url.href;
-  if(mounted.get(root)===shareUrl+'|'+key+'|'+title)return;
-  mounted.set(root,shareUrl+'|'+key+'|'+title);
-  root.dataset.photoKey=key;
-  root.innerHTML=`<div class="photo-social-row">
-    <div class="photo-reactions">
-      ${reactionButton(reactions[0])}
-      <details class="photo-emoji">
-        <summary aria-label="選擇表情"><span aria-hidden="true">☺</span></summary>
-        <div class="photo-emoji-options" role="group" aria-label="照片表情">
-          ${reactions.slice(1).map(reactionButton).join('')}
-        </div>
-      </details>
-    </div>
-    <details class="photo-share">
-      <summary><span aria-hidden="true">↗</span> 分享</summary>
-      <div class="photo-share-options">
-        <a data-facebook target="_blank" rel="noopener noreferrer">Facebook</a>
-        <a data-line target="_blank" rel="noopener noreferrer">LINE</a>
-        <button type="button" data-native-share hidden>更多</button>
-        <button type="button" data-copy-link>複製連結</button>
-      </div>
-    </details>
-  </div>
-  <p class="photo-social-status" role="status"></p>`;
-  const status=root.querySelector('.photo-social-status');
-  root.querySelector('[data-facebook]').href='https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(shareUrl);
-  root.querySelector('[data-line]').href='https://social-plugins.line.me/lineit/share?url='+encodeURIComponent(shareUrl);
-  const nativeShare=root.querySelector('[data-native-share]');
-  if(navigator.share){
-    nativeShare.hidden=false;
-    nativeShare.onclick=async()=>{
-      try{await navigator.share({title,url:shareUrl})}
-      catch(error){if(error.name!=='AbortError')status.textContent='分享未完成，可以複製連結。'}
-    };
-  }
-  root.querySelector('[data-copy-link]').onclick=async()=>{
-    try{
-      await navigator.clipboard.writeText(shareUrl);
-      status.textContent='已複製照片連結';
-    }catch{
-      status.replaceChildren();
-      const link=document.createElement('input');
-      link.type='url';
-      link.value=shareUrl;
-      link.readOnly=true;
-      link.setAttribute('aria-label','照片分享連結');
-      status.append(link);
-      link.select();
-    }
-  };
-  root.querySelector('.photo-reactions').onclick=event=>{
-    const button=event.target.closest('[data-reaction]');
-    if(!button)return;
-    const reaction=button.dataset.reaction;
-    const emojiMenu=root.querySelector('.photo-emoji');
-    if(emojiMenu.open){
-      emojiMenu.open=false;
-      emojiMenu.querySelector('summary').focus();
-    }
-    if(choices[key]===reaction)delete choices[key];
-    else choices[key]=reaction;
-    let saved=true;
-    try{localStorage.setItem(storageKey,JSON.stringify(choices))}catch{saved=false}
-    document.querySelectorAll('[data-photo-key]').forEach(element=>{
-      if(element.dataset.photoKey===key)refresh(element);
-    });
-    status.textContent=saved?(choices[key]?'已在此瀏覽器儲存表情':'已移除表情'):'表情已在此頁更新。';
-  };
-  refresh(root);
+  root.setPhoto(photo?photoKey(photo.kind+':'+photo.album,photo.src):null);
 }
 
 window.addEventListener('storage',event=>{
   if(event.key!==storageKey)return;
-  try{choices=JSON.parse(event.newValue)||{}}catch{choices={}}
-  document.querySelectorAll('[data-photo-key]').forEach(refresh);
+  try{local=JSON.parse(event.newValue)||{}}catch{local={}}
+  channels.forEach(refresh);
 });

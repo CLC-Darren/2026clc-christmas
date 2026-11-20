@@ -303,27 +303,23 @@ button.meals-cta{border:0;cursor:pointer;font-family:inherit}
 .account-menu-status,#mealAutoApproveStatus{padding:0 15px;margin:0 0 10px;font-size:13px;color:var(--muted)}
 .account-menu-status:empty,#mealAutoApproveStatus:empty{display:none}
 
-.photo-social{padding:8px 12px;border-top:1px solid #e2e7df;color:var(--forest);background:#f7f9f4}
-.photo-social[hidden],.photo-share [hidden]{display:none}
-.photo-social-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px}
-.photo-reactions{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
-.photo-reactions button,.photo-emoji summary,.photo-share summary{display:grid;place-items:center;min-width:30px;min-height:36px;border:1px solid transparent;border-radius:9px;background:transparent;color:inherit;padding:0 3px;line-height:1}
-.photo-reactions button{font-size:17px}
-.photo-reactions button:hover,.photo-emoji summary:hover,.photo-share summary:hover{background:#e9eee4}
-.photo-reactions button[aria-pressed="true"],.photo-emoji summary[data-selected="true"]{background:#fff1cc;border-color:#d9b56a;box-shadow:inset 0 0 0 1px #fffefa}
-.photo-emoji summary{font-size:17px;list-style:none;cursor:pointer}
+.photo-social{display:block;padding:6px 12px;border-top:1px solid #e2e7df;color:var(--forest);background:#f7f9f4}
+.photo-social[hidden],.photo-local-label[hidden]{display:none}
+.photo-reaction-controls{position:relative;display:flex;align-items:center;gap:4px;min-height:37px}
+.photo-like,.photo-emoji summary{border:0;border-radius:8px;background:transparent;color:inherit;min-height:36px;cursor:pointer}
+.photo-like{display:flex;align-items:center;gap:5px;padding:0 6px;font-size:14px;font-weight:750}
+.photo-like-icon{font-size:17px}
+.photo-like:hover,.photo-emoji summary:hover{background:#e7eee5}
+.photo-like[aria-pressed="true"]{background:#e2ede5;color:#175e43}
+.photo-reaction-count{font-size:14px;font-variant-numeric:tabular-nums;color:#4a6657}
+.photo-local-label{font-size:11px;color:#65746c}
+.photo-reaction-summary{margin-inline-start:auto;font-size:14px;letter-spacing:-3px;padding-inline-end:3px}
+.photo-emoji summary{display:grid;place-items:center;width:30px;font-size:14px;list-style:none}
 .photo-emoji summary::-webkit-details-marker{display:none}
-.photo-reactions:has(.photo-emoji[open]){flex-basis:100%}
-.photo-emoji-options{display:flex;flex-wrap:wrap;gap:3px;margin:4px 0;padding:3px;background:#edf2e8;border-radius:10px}
-.photo-share{position:relative;font-size:14px}
-.photo-share summary{display:flex;gap:4px;cursor:pointer;list-style:none;font-weight:750;padding-inline:7px;white-space:nowrap}
-.photo-share summary::-webkit-details-marker{display:none}
-.photo-share[open]{flex-basis:100%}
-.photo-share-options{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
-.photo-share-options a,.photo-share-options button{padding:6px 9px;border:1px solid #dce5d9;border-radius:8px;background:white;color:inherit;line-height:1.4;font:inherit;text-decoration:none}
-.photo-share-options a:hover,.photo-share-options button:hover{background:#ebf1e8}
-.photo-social-status{margin:4px 0 0;color:#58705d;font-size:13px}
+.photo-emoji-options{position:absolute;z-index:5;inset-inline-start:0;bottom:calc(100% + 5px);display:flex;flex-wrap:wrap;gap:3px;width:max-content;max-width:100%;padding:5px;border:1px solid #dce7db;border-radius:14px;background:#fffefa;box-shadow:0 4px 14px #28433333}
+.photo-emoji-options button{display:grid;place-items:center;width:34px;height:36px;border:1px solid transparent;border-radius:9px;background:none;padding:0;font-size:21px;line-height:1}
+.photo-emoji-options button:hover,.photo-emoji-options button[aria-pressed="true"]{background:#fff1cc;border-color:#d9b56a}
+.photo-social-status{margin:4px 0;color:#58705d;font-size:13px}
 .photo-social-status:empty{display:none}
-.photo-social-status input{width:100%;min-width:0}
 .central-gallery-dialog .photo-social{padding-inline:clamp(12px,3vw,24px)}
-@media (max-width:640px){.photo-reactions button,.photo-emoji summary,.photo-share summary{min-height:40px}}
+@media(max-width:640px){.photo-like,.photo-emoji summary{min-height:40px}}
