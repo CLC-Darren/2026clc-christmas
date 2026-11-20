@@ -163,55 +163,86 @@ class PhotoReactionsBar extends HTMLElement{
     this.replaceChildren();
     if(!key)return;
     this.innerHTML=`<div class="photo-reaction-controls">
-      <button type="button" class="photo-like" aria-pressed="false">
+      <button type="button" class="photo-like" aria-pressed="false" aria-expanded="false" aria-keyshortcuts="ArrowUp">
         <span class="photo-like-icon" aria-hidden="true">${thumbOutline}</span>
       </button>
       <span class="photo-reaction-count" aria-label="表情數">…</span>
-      <details class="photo-emoji">
-        <summary aria-label="選擇表情" title="愛心與其他表情"><span aria-hidden="true">☺ ▾</span></summary>
-        <div class="photo-emoji-options" role="group" aria-label="照片表情">
-          ${reactions.map(([id,icon,label])=>`<button type="button" data-reaction="${id}" aria-label="${label}" title="${label}" aria-pressed="false">${icon}</button>`).join('')}
-        </div>
-      </details>
+      <div class="photo-emoji-options" role="group" aria-label="照片表情" hidden>
+        ${reactions.map(([id,icon,label])=>`<button type="button" data-reaction="${id}" aria-label="${label}" title="${label}" aria-pressed="false">${icon}</button>`).join('')}
+      </div>
       <span class="photo-local-label" hidden>本機</span>
     </div><p class="photo-social-status" role="status"></p>`;
-    const emojiMenu=this.querySelector('details');
+    const palette=this.querySelector('.photo-emoji-options');
     const controls=this.querySelector('.photo-reaction-controls');
     const likeButton=this.querySelector('.photo-like');
-    let hoverOpened=false;
     let dismissTimer;
+    let holdTimer;
+    let holdStart;
+    let longPress=false;
+    const showPalette=show=>{
+      palette.hidden=!show;
+      likeButton.setAttribute('aria-expanded',String(show));
+    };
+    const cancelHold=()=>{
+      clearTimeout(holdTimer);
+      holdStart=null;
+    };
     likeButton.addEventListener('pointerenter',event=>{
-      if(event.pointerType!=='mouse'||emojiMenu.open)return;
-      hoverOpened=true;
-      emojiMenu.open=true;
+      if(event.pointerType==='mouse')showPalette(true);
     });
     controls.addEventListener('pointerenter',()=>clearTimeout(dismissTimer));
     controls.addEventListener('pointerleave',event=>{
-      if(event.pointerType!=='mouse'||!hoverOpened)return;
-      dismissTimer=setTimeout(()=>{
-        if(!emojiMenu.matches(':focus-within'))emojiMenu.open=false;
-        hoverOpened=false;
-      },180);
+      if(event.pointerType==='mouse'){
+        dismissTimer=setTimeout(()=>{
+          if(!palette.contains(document.activeElement))showPalette(false);
+        },180);
+      }
     });
-    emojiMenu.querySelector('summary').addEventListener('click',()=>{
-      if(!hoverOpened)return;
-      hoverOpened=false;
-      clearTimeout(dismissTimer);
+    controls.addEventListener('focusout',event=>{
+      if(!controls.contains(event.relatedTarget))showPalette(false);
     });
-    likeButton.onclick=()=>react(this.channel,'like',true);
-    this.querySelector('.photo-emoji-options').onclick=event=>{
+    likeButton.addEventListener('pointerdown',event=>{
+      longPress=false;
+      if(event.pointerType!=='touch'&&event.pointerType!=='pen')return;
+      likeButton.focus({preventScroll:true});
+      holdStart=event;
+      holdTimer=setTimeout(()=>{
+        longPress=true;
+        showPalette(true);
+      },450);
+    });
+    likeButton.addEventListener('pointermove',event=>{
+      if(holdStart&&Math.hypot(event.clientX-holdStart.clientX,event.clientY-holdStart.clientY)>10)cancelHold();
+    });
+    likeButton.addEventListener('pointerup',cancelHold);
+    likeButton.addEventListener('pointercancel',cancelHold);
+    likeButton.addEventListener('contextmenu',event=>event.preventDefault());
+    likeButton.onclick=event=>{
+      if(event.detail&&longPress){
+        longPress=false;
+        return;
+      }
+      showPalette(false);
+      react(this.channel,'like',true);
+    };
+    palette.onclick=event=>{
       const button=event.target.closest('[data-reaction]');
       if(!button)return;
-      emojiMenu.open=false;
-      emojiMenu.querySelector('summary').focus();
+      showPalette(false);
+      likeButton.focus({preventScroll:true});
       react(this.channel,button.dataset.reaction);
     };
-    emojiMenu.addEventListener('keydown',event=>{
-      if(event.key==='Escape'&&emojiMenu.open){
-        event.stopPropagation();
+    controls.addEventListener('keydown',event=>{
+      if(event.key==='ArrowUp'&&event.target===likeButton){
         event.preventDefault();
-        emojiMenu.open=false;
-        emojiMenu.querySelector('summary').focus();
+        event.stopPropagation();
+        showPalette(true);
+        palette.querySelector('button').focus();
+      }else if(event.key==='Escape'&&!palette.hidden){
+        event.preventDefault();
+        event.stopPropagation();
+        showPalette(false);
+        likeButton.focus();
       }
     });
     if(this.isConnected)this.connectedCallback();

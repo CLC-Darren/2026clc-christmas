@@ -1,5 +1,5 @@
 // 2026 CLC Christmas — 分堂餐點：六張分類卡片／七個場次；首次公開，後續修改依設定審核。
-import {renderPhotoSocial,sharedPhoto} from './photo-social.js?v=20261120-reaction-picker';
+import {renderPhotoSocial,sharedPhoto} from './photo-social.js?v=20261120-reaction-hold';
 import {firebaseConfig,superusers} from './firebase-config.js';
 import {getApps,initializeApp} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js';
