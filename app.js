@@ -284,6 +284,24 @@ let galleryTouchX=null;
 $('centralGalleryImage').addEventListener('touchstart',e=>{galleryTouchX=e.changedTouches[0]?.screenX??null},{passive:true});
 $('centralGalleryImage').addEventListener('touchend',e=>{if(galleryTouchX===null)return;const delta=e.changedTouches[0].screenX-galleryTouchX;if(Math.abs(delta)>50)moveCentralGallery(delta<0?1:-1);galleryTouchX=null},{passive:true});
 
+const checklist=$('receptionChecklist');
+const checklistItems=Array.from(checklist.querySelectorAll('input[type="checkbox"]'));
+const checklistKey='clc-reception-checklist-v1';
+const renderChecklistProgress=()=>{
+  const completed=checklistItems.filter(item=>item.checked).length;
+  $('receptionChecklistProgress').textContent=`${completed} / ${checklistItems.length} 完成`;
+};
+try{
+  const completed=JSON.parse(localStorage.getItem(checklistKey));
+  if(Array.isArray(completed))checklistItems.forEach(item=>{item.checked=completed.includes(item.value)});
+}catch{}
+renderChecklistProgress();
+checklist.addEventListener('change',()=>{
+  renderChecklistProgress();
+  const completed=checklistItems.filter(item=>item.checked).map(item=>item.value);
+  try{localStorage.setItem(checklistKey,JSON.stringify(completed))}catch{}
+});
+
 const accountMenu=$('accountMenu');
 document.addEventListener('click',event=>{if(!accountMenu.contains(event.target))accountMenu.open=false});
 accountMenu.addEventListener('keydown',event=>{

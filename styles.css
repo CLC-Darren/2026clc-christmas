@@ -320,3 +320,11 @@ button.meals-cta{border:0;cursor:pointer;font-family:inherit}
 .photo-social-status:empty{display:none}
 .central-gallery-dialog .photo-social{padding-inline:clamp(12px,3vw,24px)}
 @media(max-width:640px){.photo-like{min-height:40px}}
+
+.reception-checklist{margin-top:24px;border:1px solid #dbe3d8;border-radius:14px;background:var(--paper);padding:16px 20px}
+.reception-checklist-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px 12px;padding-bottom:10px}
+.reception-checklist h3{margin:0;color:var(--forest);font-size:19px}
+.reception-checklist output{font-size:14px;color:#536957;white-space:nowrap}
+.reception-checklist label{display:flex;align-items:center;gap:10px;min-height:48px;border-top:1px solid #e6ebe3;padding-block:9px;cursor:pointer}
+.reception-checklist input{margin:0;width:18px;height:18px;flex:none;accent-color:var(--forest)}
+.reception-checklist input:checked+span{color:#5f6c62;text-decoration:line-through}

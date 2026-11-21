@@ -10,7 +10,7 @@
   <link rel="icon" href="assets/favicon-32.png?v=20261111" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261120-reaction-hold">
+  <link rel="stylesheet" href="styles.css?v=20261121-checklist">
 </head>
 <body>
   <a class="skip-link" href="#overview">跳至主要內容</a>
@@ -137,6 +137,14 @@
       <div class="tip">江翠週六參考預算 <b>NT$ 8,000</b>、主日 <b>NT$ 12,000</b>。Life Cafe 已提供甜、鹹與咖啡；各分堂仍須向主任牧師核定預算。</div>
       <div id="honghui" class="block-heading"><div><span class="kicker">03 / HONGHUI</span><h3>宏匯聖誕接待</h3></div><p>12/19–12/20，共四場；中央準備小禮物、點心和飲料。</p></div>
       <div id="honghuiCards" class="items-grid"></div>
+      <section id="receptionChecklist" class="reception-checklist" aria-labelledby="receptionChecklistTitle">
+        <div class="reception-checklist-head">
+          <h3 id="receptionChecklistTitle">接待準備檢查清單</h3>
+          <output id="receptionChecklistProgress" aria-live="polite">0 / 2 完成</output>
+        </div>
+        <label><input type="checkbox" value="setup"><span>確認各分堂新接待點的設置與營運安排</span></label>
+        <label><input type="checkbox" value="venue"><span>完成各分堂新接待場地的場布</span></label>
+      </section>
     </section>
     <section id="attendees" class="count-section section-pad">
       <div class="container">
@@ -233,7 +241,7 @@
   </dialog>
   <dialog id="installHelpDialog" class="install-help-dialog" aria-labelledby="installHelpTitle"><div class="install-help-header"><h2 id="installHelpTitle">建立桌面捷徑</h2><button id="installHelpClose" type="button" aria-label="關閉說明">×</button></div><p id="installHelpText"></p><button type="button" id="installHelpDone" class="primary-btn">知道了</button></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="app.js?v=20261120-reaction-hold"></script>
+  <script type="module" src="app.js?v=20261121-checklist"></script>
   <script type="module" src="meal-public.js?v=20261120-reaction-hold"></script>
   <script defer src="modal-ui.js?v=20261111"></script>
   <script defer src="pwa.js?v=20261111-shortcut-v2"></script>
