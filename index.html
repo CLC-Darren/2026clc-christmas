@@ -10,7 +10,7 @@
   <link rel="icon" href="assets/favicon-32.png?v=20261111" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261121-cloud-checklist">
+  <link rel="stylesheet" href="styles.css?v=20261121-report-form">
 </head>
 <body>
   <a class="skip-link" href="#overview">跳至主要內容</a>
@@ -200,7 +200,6 @@
     <div class="submission-dialog-head"><div><span class="kicker">NEW FRIENDS</span><h2 id="countDialogTitle">回報新人人數</h2><p>免登入填寫 · 送出後即時計入首頁總數</p></div><button id="countDialogClose" class="submission-dialog-close" type="button" aria-label="關閉新人回報視窗">×</button></div>
     <div class="submission-dialog-body">
       <div class="count-dialog-tip"><span id="formRole">免登入 · 直接公開</span>　請依分堂及活動日期選擇場次</div>
-      <a id="originalFormLink" class="original-form-link" hidden target="_blank" rel="noopener noreferrer" href="https://docs.google.com/forms/d/1AzTEkqxydEYL1uA6kmDsQEg2PhH6r7Fv-rdm6vgZbAQ/edit">↗ 原 Google 表單（管理者參考）</a>
       <form id="countForm" class="form-grid">
               <label>活動日期<select id="countDate" name="date" required><option value="">選擇日期</option></select></label>
               <label>分堂／活動<select id="countBranch" name="branch" required><option value="">選擇分堂</option><option value="江翠">江翠</option><option value="新莊">新莊</option><option value="林口">林口</option><option value="宏匯聖誕">宏匯聖誕</option></select></label>
@@ -245,7 +244,7 @@
   </dialog>
   <dialog id="installHelpDialog" class="install-help-dialog" aria-labelledby="installHelpTitle"><div class="install-help-header"><h2 id="installHelpTitle">建立桌面捷徑</h2><button id="installHelpClose" type="button" aria-label="關閉說明">×</button></div><p id="installHelpText"></p><button type="button" id="installHelpDone" class="primary-btn">知道了</button></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="app.js?v=20261121-cloud-checklist"></script>
+  <script type="module" src="app.js?v=20261121-report-form"></script>
   <script type="module" src="meal-public.js?v=20261120-reaction-hold"></script>
   <script defer src="modal-ui.js?v=20261111"></script>
   <script defer src="pwa.js?v=20261111-shortcut-v2"></script>
