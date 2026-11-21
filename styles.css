@@ -325,6 +325,12 @@ button.meals-cta{border:0;cursor:pointer;font-family:inherit}
 .reception-checklist-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px 12px;padding-bottom:10px}
 .reception-checklist h3{margin:0;color:var(--forest);font-size:19px}
 .reception-checklist output{font-size:14px;color:#536957;white-space:nowrap}
-.reception-checklist label{display:flex;align-items:center;gap:10px;min-height:48px;border-top:1px solid #e6ebe3;padding-block:9px;cursor:pointer}
-.reception-checklist input{margin:0;width:18px;height:18px;flex:none;accent-color:var(--forest)}
+.reception-checklist-row{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid #e6ebe3}
+.reception-checklist label{display:flex;align-items:center;gap:10px;min-height:48px;padding-block:9px;cursor:pointer;overflow-wrap:anywhere}
+.reception-checklist input[type="checkbox"]{margin:0;width:18px;height:18px;flex:none;accent-color:var(--forest)}
 .reception-checklist input:checked+span{color:#5f6c62;text-decoration:line-through}
+
+#receptionChecklistForm{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+#receptionChecklistTitleInput{min-width:0;flex:1;padding:8px 11px;border:1px solid var(--line);border-radius:8px}
+#receptionChecklistStatus{margin:8px 0 0;font-size:14px;color:#536957}
+#receptionChecklistStatus:empty{display:none}

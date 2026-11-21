@@ -9,7 +9,7 @@ const [appSDK,authSDK,dbSDK]=configured?await Promise.all([
 ]):[{},{},{}];
 const {initializeApp,getApps}=appSDK;
 const {getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged}=authSDK;
-const {getFirestore,collection,doc,addDoc,setDoc,deleteDoc,onSnapshot,getDocFromServer,serverTimestamp}=dbSDK;
+const {getFirestore,collection,doc,addDoc,setDoc,deleteDoc,onSnapshot,getDocFromServer,serverTimestamp,runTransaction,updateDoc}=dbSDK;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const localPrefix='clc_christmas_2026_public_';
@@ -285,21 +285,95 @@ $('centralGalleryImage').addEventListener('touchstart',e=>{galleryTouchX=e.chang
 $('centralGalleryImage').addEventListener('touchend',e=>{if(galleryTouchX===null)return;const delta=e.changedTouches[0].screenX-galleryTouchX;if(Math.abs(delta)>50)moveCentralGallery(delta<0?1:-1);galleryTouchX=null},{passive:true});
 
 const checklist=$('receptionChecklist');
-const checklistItems=Array.from(checklist.querySelectorAll('input[type="checkbox"]'));
-const checklistKey='clc-reception-checklist-v1';
-const renderChecklistProgress=()=>{
-  const completed=checklistItems.filter(item=>item.checked).length;
-  $('receptionChecklistProgress').textContent=`${completed} / ${checklistItems.length} 完成`;
-};
-try{
-  const completed=JSON.parse(localStorage.getItem(checklistKey));
-  if(Array.isArray(completed))checklistItems.forEach(item=>{item.checked=completed.includes(item.value)});
-}catch{}
-renderChecklistProgress();
-checklist.addEventListener('change',()=>{
-  renderChecklistProgress();
-  const completed=checklistItems.filter(item=>item.checked).map(item=>item.value);
-  try{localStorage.setItem(checklistKey,JSON.stringify(completed))}catch{}
+const checklistForm=$('receptionChecklistForm');
+const checklistStatus=$('receptionChecklistStatus');
+const checklistCollection='receptionChecklist';
+let stopChecklist;
+let checklistSession=0;
+
+async function loadChecklist(){
+  const session=++checklistSession;
+  stopChecklist?.();
+  stopChecklist=null;
+  checklist.hidden=!admin();
+  $('receptionChecklistItems').replaceChildren();
+  $('receptionChecklistProgress').textContent='';
+  checklistForm.reset();
+  for(const control of checklistForm.elements)control.disabled=true;
+  if(!admin())return;
+  checklistStatus.textContent='讀取中…';
+  try{
+    const marker=docRef(checklistCollection,'initialized');
+    await runTransaction(state.db,async transaction=>{
+      if((await transaction.get(marker)).exists())return;
+      const defaults=[
+        ['setup','確認各分堂新接待點的設置與營運安排'],
+        ['venue','完成各分堂新接待場地的場布']
+      ];
+      for(const [id,title] of defaults){
+        transaction.set(docRef(checklistCollection,id),{title,done:false,createdAt:serverTimestamp()});
+      }
+      transaction.set(marker,{ready:true});
+    });
+    if(session!==checklistSession)return;
+    stopChecklist=onSnapshot(collectionRef(checklistCollection),snapshot=>{
+      if(session!==checklistSession)return;
+      const items=snapshot.docs.filter(record=>record.id!=='initialized')
+        .map(record=>({...record.data(),id:record.id}))
+        .sort((first,second)=>sortTime(first)-sortTime(second));
+      $('receptionChecklistProgress').textContent=`${items.filter(item=>item.done).length} / ${items.length} 完成`;
+      $('receptionChecklistItems').innerHTML=items.map(item=>`
+        <div class="reception-checklist-row">
+          <label><input type="checkbox" data-checklist-id="${esc(item.id)}"${item.done?' checked':''}><span>${esc(item.title)}</span></label>
+          <button type="button" class="card-button" data-checklist-delete="${esc(item.id)}" aria-label="刪除 ${esc(item.title)}">刪除</button>
+        </div>`).join('');
+      if($('receptionChecklistTitleInput').disabled){
+        for(const control of checklistForm.elements)control.disabled=false;
+        checklistStatus.textContent='';
+      }
+    },error=>showChecklistError(error,session));
+  }catch(error){showChecklistError(error,session)}
+}
+function showChecklistError(error,session){
+  if(session!==checklistSession)return;
+  checklistStatus.textContent=error.code==='permission-denied'?'清單權限不足，請確認新版 Firestore 規則已發布。':'無法同步清單，請稍後再試。';
+}
+checklistForm.addEventListener('submit',async event=>{
+  event.preventDefault();
+  const input=$('receptionChecklistTitleInput');
+  const title=input.value.trim();
+  const submit=checklistForm.querySelector('button');
+  if(!admin()||submit.disabled||!title)return;
+  const session=checklistSession;
+  submit.disabled=true;
+  checklistStatus.textContent='';
+  try{
+    await addDoc(collectionRef(checklistCollection),{title,done:false,createdAt:serverTimestamp()});
+    if(session===checklistSession&&input.value.trim()===title)input.value='';
+  }catch(error){showChecklistError(error,session)}
+  finally{if(session===checklistSession)submit.disabled=false}
+});
+checklist.addEventListener('change',async event=>{
+  const input=event.target;
+  const id=input.dataset.checklistId;
+  if(!id||!admin())return;
+  const session=checklistSession;
+  const done=input.checked;
+  input.disabled=true;
+  checklistStatus.textContent='';
+  try{await updateDoc(docRef(checklistCollection,id),{done})}
+  catch(error){input.checked=!done;showChecklistError(error,session)}
+  finally{input.disabled=false}
+});
+checklist.addEventListener('click',async event=>{
+  const button=event.target.closest('[data-checklist-delete]');
+  if(!button||!admin()||!confirm('確定刪除此檢查項目？'))return;
+  const session=checklistSession;
+  button.disabled=true;
+  checklistStatus.textContent='';
+  try{await deleteDoc(docRef(checklistCollection,button.dataset.checklistDelete))}
+  catch(error){showChecklistError(error,session)}
+  finally{button.disabled=false}
 });
 
 const accountMenu=$('accountMenu');
@@ -355,6 +429,7 @@ if(configured){const app=getApps()[0]||initializeApp(firebaseConfig);state.db=ge
     state.authReady=true;
     state.user=user;
     renderLogin();
+    loadChecklist();
   });
   const sub=(name,handler)=>onSnapshot(collectionRef(name),snap=>handler(snap),error=>{console.error('Firestore listener',name,error);notice(`讀取 ${name} 失敗：${safeMsg(error)}。請核對 Firestore Database → Rules 已 Publish。`,true)});
   sub('sections',snap=>{state.sections=new Map(snap.docs.map(d=>[d.id,d.data()]));renderSections()});
